@@ -1,0 +1,7 @@
+conda create -n DL_project python=3.11
+
+conda activate DL_project 
+
+conda deactivate
+
+pip install -r requirements.txt
