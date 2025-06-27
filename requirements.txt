@@ -1,2 +1,12 @@
 ipykernel==6.29.5
 tqdm>=4.0
+torch==2.2.2
+torchvision==0.17.2
+segmentation-models-pytorch==0.3.3
+albumentations==1.4.0
+opencv-python==4.9.0.80
+numpy==1.26.4
+tqdm==4.66.4
+pillow==10.3.0
+scikit-learn==1.5.0
+matplotlib==3.9.0
