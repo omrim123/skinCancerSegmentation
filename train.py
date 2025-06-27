@@ -16,7 +16,7 @@ from tqdm import tqdm
 import wandb
 from evaluate import evaluate
 from models.unet import UNet
-from utils.data_loading import BasicDataset, CarvanaDataset
+from utils.data_loading import ISIC2018Task2
 from utils.dice_score import dice_loss
 
 dir_img = Path('./data/imgs/')
@@ -40,9 +40,9 @@ def train_model(
 ):
     # 1. Create dataset
     try:
-        dataset = CarvanaDataset(dir_img, dir_mask, img_scale)
+        dataset = ISIC2018Task2(dir_img, dir_mask, img_scale)
     except (AssertionError, RuntimeError, IndexError):
-        dataset = BasicDataset(dir_img, dir_mask, img_scale)
+        logging.error("failed initializing ISIC2018Task2")
 
     # 2. Split into train / validation partitions
     n_val = int(len(dataset) * val_percent)
