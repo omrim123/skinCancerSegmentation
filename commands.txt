@@ -5,3 +5,8 @@ conda activate DL_project
 conda deactivate
 
 pip install -r requirements.txt
+
+conda list --export > requirements2_test.txt
+
+To download dataset we used:
+python extract_data_from_web.py
