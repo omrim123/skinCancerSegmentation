@@ -25,11 +25,11 @@ from models.unet import UNet
 from utils.data_loading import ISIC2018Task2
 from utils.dice_score import dice_loss
 
-train_dir_img = Path('./isic2018_task2/train/ISIC2018_Task1-2_Training_Input/')
-train_dir_mask = Path('./isic2018_task2/train/ISIC2018_Task2_Training_GroundTruth_v3/')
+train_dir_img = Path('./isic2018_resized/train/ISIC2018_Task1-2_Training_Input/')
+train_dir_mask = Path('./isic2018_resized/train/ISIC2018_Task2_Training_GroundTruth_v3/')
 
-val_dir_img = Path('./isic2018_task2/val/ISIC2018_Task1-2_Validation_Input/')
-val_dir_mask = Path('./isic2018_task2/val/ISIC2018_Task2_Validation_GroundTruth/')
+val_dir_img = Path('./isic2018_resized/val/ISIC2018_Task1-2_Validation_Input/')
+val_dir_mask = Path('./isic2018_resized/val/ISIC2018_Task2_Validation_GroundTruth/')
 
 dir_checkpoint = Path('./checkpoints/')
 
@@ -58,8 +58,8 @@ def train_model(
         ToTensorPair(),
         RandomHorizontalFlipPair(p=0.5),
         RandomVerticalFlipPair(p=0.5),
-        RandomRotationPair(degrees=90),
-        ResizePair(input_size_h, input_size_w),
+        # RandomRotationPair(degrees=90),
+        # ResizePair(input_size_h, input_size_w),
     ])
 
     # 1. Create dataset
@@ -74,7 +74,7 @@ def train_model(
     n_train = len(train_set)
     n_val = len(val_set)
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=2, pin_memory=True)
+    loader_args = dict(batch_size=batch_size, num_workers=4, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
@@ -156,8 +156,8 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                # division_step = (n_train // (5 * batch_size))
-                division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
+                division_step = (n_train // (2 * batch_size)) # every 50% 
+                # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
@@ -191,7 +191,7 @@ def train_model(
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
-            state_dict['mask_values'] = train_set.mask_values
+            # state_dict['mask_values'] = train_set.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
 
@@ -230,7 +230,7 @@ if __name__ == '__main__':
     args = HyperParams(
         epochs=1, 
         batch_size=4,
-        lr=0.001,
+        lr=0.002,
         load=None,
         scale=0.5, # delete  
         val=0.2, 
