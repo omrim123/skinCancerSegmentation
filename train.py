@@ -100,7 +100,8 @@ def train_model(
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
     optimizer = optim.Adam(model.parameters(),
                     lr=learning_rate, weight_decay=weight_decay)    
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
     criterion = nn.BCEWithLogitsLoss()
     global_step = 0
 
@@ -156,7 +157,8 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (2 * batch_size)) # every 50% 
+                division_step = (n_train // (batch_size))
+                # division_step = (n_train // (2 * batch_size)) # every 50% 
                 # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
@@ -228,10 +230,11 @@ class HyperParams():
 
 if __name__ == '__main__':
     args = HyperParams(
-        epochs=1, 
+        epochs=10, 
         batch_size=4,
         lr=0.002,
-        load=None,
+        # load=None,
+        load='checkpoints/checkpoint_epoch1.pth',
         scale=0.5, # delete  
         val=0.2, 
         amp=False, 
@@ -262,7 +265,7 @@ if __name__ == '__main__':
 
     if args.load:
         state_dict = torch.load(args.load, map_location=device)
-        del state_dict['mask_values']
+        # del state_dict['mask_values']
         model.load_state_dict(state_dict)
         logging.info(f'Model loaded from {args.load}')
 
