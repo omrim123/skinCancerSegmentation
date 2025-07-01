@@ -1,0 +1,44 @@
+INFO: Starting training:
+        Epochs:          5
+        Batch size:      128
+        Learning rate:   0.001
+        Training size:   2594
+        Validation size: 100
+        Checkpoints:     True
+        Device:          mps
+        Images scaling:  0.5
+        Mixed Precision: False
+Epoch 1/5:   0%|                                                                                                                                                            | 0/2594 [00:03<?, ?img/s]
+Traceback (most recent call last):
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 252, in <module>
+    train_model(
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 99, in train_model
+    for batch in train_loader:
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 631, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1346, in _next_data
+    return self._process_data(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1372, in _process_data
+    data.reraise()
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/_utils.py", line 722, in reraise
+    raise exception
+FileNotFoundError: Caught FileNotFoundError in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/utils/data_loading.py", line 41, in __getitem__
+    m     = np.array(Image.open(m_path).convert("L"), dtype=np.uint8)
+                     ^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/PIL/Image.py", line 3277, in open
+    fp = builtins.open(filename, "rb")
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+FileNotFoundError: [Errno 2] No such file or directory: '/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/isic2018_task2/train/ISIC2018_Task2_Training_GroundTruth_v3/ISIC_0010565_pigment_network.png'

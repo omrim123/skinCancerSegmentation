@@ -1,4 +1,4 @@
-import argparse
+# import argparse
 import logging
 import os
 import random
@@ -12,15 +12,25 @@ from pathlib import Path
 from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
+from utils.utils import *
 
+USE_WANDB = False
+if not USE_WANDB:
+    os.environ["WANDB_MODE"] = "disabled"
 import wandb
+
+
 from evaluate import evaluate
 from models.unet import UNet
 from utils.data_loading import ISIC2018Task2
 from utils.dice_score import dice_loss
 
-dir_img = Path('./data/imgs/')
-dir_mask = Path('./data/masks/')
+train_dir_img = Path('./isic2018_task2/train/ISIC2018_Task1-2_Training_Input/')
+train_dir_mask = Path('./isic2018_task2/train/ISIC2018_Task2_Training_GroundTruth_v3/')
+
+val_dir_img = Path('./isic2018_task2/val/ISIC2018_Task1-2_Validation_Input/')
+val_dir_mask = Path('./isic2018_task2/val/ISIC2018_Task2_Validation_GroundTruth/')
+
 dir_checkpoint = Path('./checkpoints/')
 
 
@@ -38,17 +48,31 @@ def train_model(
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
 ):
+    
+    input_size_h = 256
+    input_size_w = 256
+
+
+    train_transformer = PairCompose([
+        MyNormalize(mean=157.561, std=26.706),
+        ToTensorPair(),
+        RandomHorizontalFlipPair(p=0.5),
+        RandomVerticalFlipPair(p=0.5),
+        RandomRotationPair(degrees=90),
+        ResizePair(input_size_h, input_size_w),
+    ])
+
     # 1. Create dataset
     try:
-        dataset = ISIC2018Task2(dir_img, dir_mask, img_scale)
+        train_set = ISIC2018Task2(train_dir_img, train_dir_mask,transform=train_transformer) # TODO add preprocess
+        val_set = ISIC2018Task2(val_dir_img, val_dir_mask,transform=train_transformer)
     except (AssertionError, RuntimeError, IndexError):
         logging.error("failed initializing ISIC2018Task2")
 
-    # 2. Split into train / validation partitions
-    n_val = int(len(dataset) * val_percent)
-    n_train = len(dataset) - n_val
-    train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
+    # train_set, val_set = random_split(dataset, [n_train, n_val], generator=torch.Generator().manual_seed(0))
 
+    n_train = len(train_set)
+    n_val = len(val_set)
     # 3. Create data loaders
     loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
@@ -74,11 +98,10 @@ def train_model(
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.RMSprop(model.parameters(),
-                              lr=learning_rate, weight_decay=weight_decay, momentum=momentum, foreach=True)
+    optimizer = optim.Adam(model.parameters(),
+                    lr=learning_rate, weight_decay=weight_decay)    
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-    grad_scaler = torch.cuda.amp.GradScaler(enabled=amp)
-    criterion = nn.CrossEntropyLoss() if model.n_classes > 1 else nn.BCEWithLogitsLoss()
+    criterion = nn.BCEWithLogitsLoss()
     global_step = 0
 
     # 5. Begin training
@@ -95,7 +118,7 @@ def train_model(
                     'the images are loaded correctly.'
 
                 images = images.to(device=device, dtype=torch.float32, memory_format=torch.channels_last)
-                true_masks = true_masks.to(device=device, dtype=torch.long)
+                true_masks = true_masks.to(device=device, dtype=torch.float32)
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
@@ -103,19 +126,24 @@ def train_model(
                         loss = criterion(masks_pred.squeeze(1), true_masks.float())
                         loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
                     else:
+                        # print("masks_pred shape:", masks_pred.shape)
+                        # print("true_masks shape:", true_masks.shape)
                         loss = criterion(masks_pred, true_masks)
+                        # loss += dice_loss(
+                        #     F.softmax(masks_pred, dim=1).float(),
+                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                        #     multiclass=True
+                        # )
                         loss += dice_loss(
-                            F.softmax(masks_pred, dim=1).float(),
-                            F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                            multiclass=True
+                            torch.sigmoid(masks_pred),
+                            true_masks,
+                            multiclass=False  # For multi-label binary segmentation, not multiclass
                         )
 
                 optimizer.zero_grad(set_to_none=True)
-                grad_scaler.scale(loss).backward()
-                grad_scaler.unscale_(optimizer)
+                loss.backward()
                 torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_clipping)
-                grad_scaler.step(optimizer)
-                grad_scaler.update()
+                optimizer.step()
 
                 pbar.update(images.shape[0])
                 global_step += 1
@@ -162,38 +190,67 @@ def train_model(
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
-            state_dict['mask_values'] = dataset.mask_values
+            state_dict['mask_values'] = train_set.mask_values
             torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
             logging.info(f'Checkpoint {epoch} saved!')
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
-    parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
-    parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
-    parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
-                        help='Learning rate', dest='lr')
-    parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
-    parser.add_argument('--scale', '-s', type=float, default=0.5, help='Downscaling factor of the images')
-    parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
-                        help='Percent of the data that is used as validation (0-100)')
-    parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
-    parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
-    parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
+# def get_args():
+#     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
+#     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
+#     parser.add_argument('--batch-size', '-b', dest='batch_size', metavar='B', type=int, default=1, help='Batch size')
+#     parser.add_argument('--learning-rate', '-l', metavar='LR', type=float, default=1e-5,
+#                         help='Learning rate', dest='lr')
+#     parser.add_argument('--load', '-f', type=str, default=False, help='Load model from a .pth file')
+#     parser.add_argument('--scale', '-s', type=float, default=0.5, help='Downscaling factor of the images')
+#     parser.add_argument('--validation', '-v', dest='val', type=float, default=10.0,
+#                         help='Percent of the data that is used as validation (0-100)')
+#     parser.add_argument('--amp', action='store_true', default=False, help='Use mixed precision')
+#     parser.add_argument('--bilinear', action='store_true', default=False, help='Use bilinear upsampling')
+#     parser.add_argument('--classes', '-c', type=int, default=2, help='Number of classes')
 
-    return parser.parse_args()
+#     return parser.parse_args()
+
+
+class HyperParams():
+    def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes):
+        self.epochs = epochs
+        self.batch_size = batch_size
+        self.lr = lr
+        self.load = load
+        self.scale = scale
+        self.val = val
+        self.amp = amp
+        self.bilinear = bilinear
+        self.classes = classes
 
 
 if __name__ == '__main__':
-    args = get_args()
+    args = HyperParams(
+        epochs=1, 
+        batch_size=256,
+        lr=0.001,
+        load=None,
+        scale=0.5, # delete  
+        val=0.2, 
+        amp=False, 
+        bilinear=True, 
+        classes=5
+    )
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    if torch.cuda.is_available():
+        device = torch.device('cuda')
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+        device = torch.device('mps')
+    else:
+        device = torch.device('cpu')    
+    
     logging.info(f'Using device {device}')
 
     # Change here to adapt to your data
     # n_channels=3 for RGB images
-    # n_classes is the number of probabilities you want to get per pixel
+    # n_classes is the number of probabilities you want to get per pixel 
     model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     model = model.to(memory_format=torch.channels_last)
 

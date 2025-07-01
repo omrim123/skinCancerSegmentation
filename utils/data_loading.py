@@ -10,7 +10,7 @@ class ISIC2018Task2(Dataset):
         "pigment_network",
         "negative_network",
         "streaks",
-        "milia_like_cysts",
+        "milia_like_cyst",
         "globules",
     ]
 
@@ -37,19 +37,22 @@ class ISIC2018Task2(Dataset):
         # --- load & stack the 5 attribute masks ---
         masks = []
         for attr in self.ATTRIBUTES:
-            m_path = self.masks_dir / f"{img_id}_{atr}.png"
+            m_path = self.masks_dir / f"{img_id}_attribute_{attr}.png"
             m     = np.array(Image.open(m_path).convert("L"), dtype=np.uint8)
             # ensure binary 0/1
             m     = (m > 127).astype(np.uint8)
             masks.append(m)
-        # masks: list of (H,W) → stack → (H,W,5)
-        mask = np.stack(masks, axis=-1)
+        # # masks: list of (H,W) → stack → (H,W,5)
+        # mask = np.stack(masks, axis=-1)
 
+        mask = np.stack(masks, axis=0)  # (5, H, W)
+        # print("Final mask shape returned by __getitem__:", mask.shape)
         # --- apply any joint transforms (if given) ---
         if self.transform:
+            # print(self.transform)
             img, mask = self.transform((img, mask))
 
-        return img, mask
+        return {'image': img, 'mask': mask}
 
 """
 import logging

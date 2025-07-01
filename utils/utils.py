@@ -23,7 +23,8 @@ class ToTensorPair:
         img_t = TF.to_tensor(img)
         # mask: H×W or H×W×1  ndarray or PIL → LongTensor 1×H×W with integer labels
         mask_np = np.array(mask, dtype=np.int64)
-        mask_t  = torch.from_numpy(mask_np).unsqueeze(0)
+        # mask_t  = torch.from_numpy(mask_np).unsqueeze(0)
+        mask_t  = torch.from_numpy(mask_np)
         return img_t, mask_t
 
 
@@ -49,8 +50,8 @@ class RandomRotationPair:
         angle = random.uniform(-self.degrees, self.degrees)
         # image: use bilinear (default); mask: nearest
         return (
-            TF.rotate(img, angle, resample=Image.BILINEAR),
-            TF.rotate(mask, angle, resample=Image.NEAREST),
+            TF.rotate(img, angle, interpolation=Image.BILINEAR),
+            TF.rotate(mask, angle, interpolation=Image.NEAREST),
         )
 
 

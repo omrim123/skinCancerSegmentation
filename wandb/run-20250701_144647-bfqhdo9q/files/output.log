@@ -1,0 +1,17 @@
+INFO: Starting training:
+        Epochs:          5
+        Batch size:      128
+        Learning rate:   0.001
+        Training size:   2594
+        Validation size: 100
+        Checkpoints:     True
+        Device:          cpu
+        Images scaling:  0.5
+        Mixed Precision: False
+Traceback (most recent call last):
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 242, in <module>
+    train_model(
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 86, in train_model
+    grad_scaler = torch.amp.GradScaler(enabled=amp)
+                  ^^^^^^^^^^^^^^^^^^^^
+AttributeError: module 'torch.amp' has no attribute 'GradScaler'

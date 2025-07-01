@@ -1,0 +1,47 @@
+INFO: Starting training:
+        Epochs:          5
+        Batch size:      128
+        Learning rate:   0.001
+        Training size:   2594
+        Validation size: 100
+        Checkpoints:     True
+        Device:          mps
+        Images scaling:  0.5
+        Mixed Precision: False
+Epoch 1/5:   0%|                                                                                                                                                            | 0/2594 [00:04<?, ?img/s]
+Traceback (most recent call last):
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 267, in <module>
+    train_model(
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/train.py", line 114, in train_model
+    for batch in train_loader:
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 631, in __next__
+    data = self._next_data()
+           ^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1346, in _next_data
+    return self._process_data(data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/dataloader.py", line 1372, in _process_data
+    data.reraise()
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/_utils.py", line 722, in reraise
+    raise exception
+TypeError: Caught TypeError in DataLoader worker process 0.
+Original Traceback (most recent call last):
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/worker.py", line 308, in _worker_loop
+    data = fetcher.fetch(index)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in fetch
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/anaconda3/envs/DL_project/lib/python3.11/site-packages/torch/utils/data/_utils/fetch.py", line 51, in <listcomp>
+    data = [self.dataset[idx] for idx in possibly_batched_index]
+            ~~~~~~~~~~~~^^^^^
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/utils/data_loading.py", line 51, in __getitem__
+    img, mask = self.transform((img, mask))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/utils/utils.py", line 15, in __call__
+    img, mask = t(img, mask)
+                ^^^^^^^^^^^^
+  File "/Users/nathan/Documents/Semester6/DeepLearning/DL_Project/skinCancerSegmentation/utils/utils.py", line 52, in __call__
+    TF.rotate(img, angle, resample=Image.BILINEAR),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: rotate() got an unexpected keyword argument 'resample'
