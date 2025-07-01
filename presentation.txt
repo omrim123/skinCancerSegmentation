@@ -1,0 +1,8 @@
+
+
+
+Explain about the problem we had with the data.
+Our training was really slow in the beginning. we were doing transforms on the data every time it was loaded and also a 90 deg rotation.
+For lauching the train pipeline to see if it was working we decided for now to remove the rotation. And decided to do the the resize as
+ a pre process and save it to save time during training
+This allowed us to reduce by a lot training time.
