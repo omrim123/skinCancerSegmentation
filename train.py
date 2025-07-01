@@ -74,7 +74,7 @@ def train_model(
     n_train = len(train_set)
     n_val = len(val_set)
     # 3. Create data loaders
-    loader_args = dict(batch_size=batch_size, num_workers=os.cpu_count(), pin_memory=True)
+    loader_args = dict(batch_size=batch_size, num_workers=2, pin_memory=True)
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
@@ -156,7 +156,8 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (5 * batch_size))
+                # division_step = (n_train // (5 * batch_size))
+                division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
                         histograms = {}
@@ -228,7 +229,7 @@ class HyperParams():
 if __name__ == '__main__':
     args = HyperParams(
         epochs=1, 
-        batch_size=256,
+        batch_size=4,
         lr=0.001,
         load=None,
         scale=0.5, # delete  
