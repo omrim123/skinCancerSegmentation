@@ -1,5 +1,5 @@
 from torchvision import transforms
-from utils import *
+from utils.utils import *
 
 from datetime import datetime
 
@@ -56,9 +56,9 @@ class setting_config:
         ResizePair(input_size_h, input_size_w),
     ])
 
-    test_transformer = transforms.Compose([
-        myNormalize(datasets, train=False),
-        myToTensor(),
+    test_transformer = PairCompose([
+        MyNormalize(mean=157.561, std=26.706),
+        ToTensorPair(),
         ResizePair(input_size_h, input_size_w)
     ])
 
