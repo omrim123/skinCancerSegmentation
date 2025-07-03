@@ -22,6 +22,7 @@ import wandb
 
 from evaluate import evaluate
 from models.unet import UNet
+from models.unet_residual import UNetResidual
 from utils.data_loading import ISIC2018Task2
 from utils.dice_score import *
 
@@ -185,6 +186,7 @@ def train_model(
                 # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
+
                         # histograms = {}
                         # for tag, value in model.named_parameters():
                         #     tag = tag.replace('/', '.')
@@ -227,7 +229,7 @@ def train_model(
 
 
 class HyperParams():
-    def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes):
+    def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes, model):
         self.epochs = epochs
         self.batch_size = batch_size
         self.lr = lr
@@ -237,6 +239,7 @@ class HyperParams():
         self.amp = amp
         self.bilinear = bilinear
         self.classes = classes
+        self.model = model
 
 
 if __name__ == '__main__':
@@ -250,7 +253,9 @@ if __name__ == '__main__':
         val=0.2, 
         amp=False, 
         bilinear=True, 
-        classes=5
+        classes=5,
+        # model='unet',
+        model='unet-residual',
     )
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -266,7 +271,13 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel 
-    model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    if args.model == 'unet':
+        model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    elif args.model == 'unet-residual':
+        model = UNetResidual(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    else:
+        model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
