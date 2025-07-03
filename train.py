@@ -52,20 +52,23 @@ def train_model(
     input_size_h = 256
     input_size_w = 256
 
-
+    val_transformer = PairCompose([
+      ToTensorPair(),
+      MyNormalize(mean=[0.61788, 0.49051, 0.43048],
+                  std=[0.19839, 0.16931, 0.16544]),
+      ])
     train_transformer = PairCompose([
-        MyNormalize(mean=157.561, std=26.706),
-        ToTensorPair(),
+        ToTensorPair(),                      # Convert to tensor first
+        MyNormalize(mean=[0.61788, 0.49051, 0.43048], # Pre-calculated from ISIC dataset
+                std=[0.19839, 0.16931, 0.16544]),
         RandomHorizontalFlipPair(p=0.5),
         RandomVerticalFlipPair(p=0.5),
-        # RandomRotationPair(degrees=90),
-        # ResizePair(input_size_h, input_size_w),
     ])
 
     # 1. Create dataset
     try:
         train_set = ISIC2018Task2(train_dir_img, train_dir_mask,transform=train_transformer) # TODO add preprocess
-        val_set = ISIC2018Task2(val_dir_img, val_dir_mask,transform=train_transformer)
+        val_set = ISIC2018Task2(val_dir_img, val_dir_mask,transform=val_transformer)
     except (AssertionError, RuntimeError, IndexError):
         logging.error("failed initializing ISIC2018Task2")
 
@@ -101,8 +104,8 @@ def train_model(
     optimizer = optim.Adam(model.parameters(),
                     lr=learning_rate, weight_decay=weight_decay)    
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-
+    #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=3, factor=0.5)
 #=============================================== WEIGHTED LOSS =========================
     class_frequencies = torch.tensor([
     0.492,  # pigment_network
@@ -147,23 +150,19 @@ def train_model(
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    if model.n_classes == 1:
-                        loss = criterion(masks_pred.squeeze(1), true_masks.float())
-                        loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
-                    else:
-                        # print("masks_pred shape:", masks_pred.shape)
-                        # print("true_masks shape:", true_masks.shape)
+                    # print("masks_pred shape:", masks_pred.shape)
+                    # print("true_masks shape:", true_masks.shape)
 
-                        loss = criterion(masks_pred, true_masks)
-                        # loss += dice_loss(
-                        #     F.softmax(masks_pred, dim=1).float(),
-                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                        #     multiclass=True
-                        # )
-                        loss += dice_loss(
-                            torch.sigmoid(masks_pred),
-                            true_masks
-                        )
+                    bce_loss = criterion(masks_pred, true_masks)
+                    # loss += dice_loss(
+                    #     F.softmax(masks_pred, dim=1).float(),
+                    #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                    #     multiclass=True
+                    # )
+                    loss = 0.5 * bce_loss + 0.2 * dice_loss(
+                                      torch.sigmoid(masks_pred),
+                                      true_masks
+                                  )
 
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
@@ -186,35 +185,37 @@ def train_model(
                 # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
-                        histograms = {}
-                        for tag, value in model.named_parameters():
-                            tag = tag.replace('/', '.')
-                            if not (torch.isinf(value) | torch.isnan(value)).any():
-                                histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                            if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
-                                histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
+                        # histograms = {}
+                        # for tag, value in model.named_parameters():
+                        #     tag = tag.replace('/', '.')
+                        #     if not (torch.isinf(value) | torch.isnan(value)).any():
+                        #         histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
+                        #     if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
+                        #         histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
                         dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
-                        scheduler.step()
+                        #scheduler.step()
+                        scheduler.step(dice_val_score)
+
 
                         logging.info('Validation Dice score: {}'.format(dice_val_score))
                         logging.info('Validation jaccard_index: {}'.format(jaccard_val_score))
-                        try:
-                            experiment.log({
-                                'learning rate': optimizer.param_groups[0]['lr'],
-                                'validation Dice': dice_val_score,
-                                'validation jaccard': jaccard_val_score,
-                                'images': wandb.Image(images[0].cpu()),
-                                'masks': {
-                                    'true': wandb.Image(true_masks[0].float().cpu()),
-                                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                                },
-                                'step': global_step,
-                                'epoch': epoch,
-                                **histograms
-                            })
-                        except:
-                            pass
+                        # try:
+                        #     experiment.log({
+                        #         'learning rate': optimizer.param_groups[0]['lr'],
+                        #         'validation Dice': dice_val_score,
+                        #         'validation jaccard': jaccard_val_score,
+                        #         'images': wandb.Image(images[0].cpu()),
+                        #         'masks': {
+                        #             'true': wandb.Image(true_masks[0].float().cpu()),
+                        #             'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
+                        #         },
+                        #         'step': global_step,
+                        #         'epoch': epoch,
+                        #         **histograms
+                        #     })
+                        # except:
+                        #     pass
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -240,11 +241,11 @@ class HyperParams():
 
 if __name__ == '__main__':
     args = HyperParams(
-        epochs=10, 
-        batch_size=4,
-        lr=0.002,
+        epochs=40, 
+        batch_size=32,
+        lr=1e-4,
         load=None,
-        # load='checkpoints/checkpoint_epoch1.pth',
+        #load='checkpoints/checkpoint_epoch1.pth',
         scale=0.5, # delete  
         val=0.2, 
         amp=False, 
