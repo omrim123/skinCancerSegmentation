@@ -20,7 +20,7 @@ if not USE_WANDB:
 import wandb
 
 
-from evaluate import evaluate
+from utils.dice_score import *
 from models.unet import UNet
 from utils.data_loading import ISIC2018Task2
 from utils.dice_score import dice_loss
@@ -58,8 +58,7 @@ def train_model(
         ToTensorPair(),
         RandomHorizontalFlipPair(p=0.5),
         RandomVerticalFlipPair(p=0.5),
-        # RandomRotationPair(degrees=90),
-        # ResizePair(input_size_h, input_size_w),
+        RandomRotationPair(degrees=90)
     ])
 
     # 1. Create dataset
@@ -121,7 +120,7 @@ def train_model(
     # Normalizing can lead to more stable training. A common way is to 
     # divide by the smallest weight, making the smallest weight 1.0.
     normalized_weights = inverse_freq_weights / inverse_freq_weights.min()
-    pos_weights_tensor = normalized_weights.to(device)
+    pos_weights_tensor = normalized_weights.view(1, -1, 1, 1).to(device)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights_tensor)
 
 #========================================================================================
@@ -146,23 +145,11 @@ def train_model(
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    if model.n_classes == 1:
-                        loss = criterion(masks_pred.squeeze(1), true_masks.float())
-                        loss += dice_loss(F.sigmoid(masks_pred.squeeze(1)), true_masks.float(), multiclass=False)
-                    else:
-                        # print("masks_pred shape:", masks_pred.shape)
-                        # print("true_masks shape:", true_masks.shape)
-                        loss = criterion(masks_pred, true_masks)
-                        # loss += dice_loss(
-                        #     F.softmax(masks_pred, dim=1).float(),
-                        #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                        #     multiclass=True
-                        # )
-                        loss += dice_loss(
-                            torch.sigmoid(masks_pred),
-                            true_masks,
-                            multiclass=False  # For multi-label binary segmentation, not multiclass
-                        )
+                    loss = criterion(masks_pred, true_masks)
+                    loss += dice_loss(
+                        torch.sigmoid(masks_pred),
+                        true_masks
+                    )
 
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
@@ -193,14 +180,16 @@ def train_model(
                             if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
                                 histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(model, val_loader, device, amp)
-                        scheduler.step(val_score)
+                        val_dice_score, val_jaccard_score = evaluate(model, val_loader, device, amp)
+                        scheduler.step(val_dice_score)
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
+                        logging.info('Validation Dice score: {}'.format(val_dice_score))
+                        logging.info('Jaccard Index score: {}'.format(val_jaccard_score))
                         try:
                             experiment.log({
                                 'learning rate': optimizer.param_groups[0]['lr'],
-                                'validation Dice': val_score,
+                                'validation Dice': val_dice_score,
+                                'dice_score': val_jaccard_score,
                                 'images': wandb.Image(images[0].cpu()),
                                 'masks': {
                                     'true': wandb.Image(true_masks[0].float().cpu()),
