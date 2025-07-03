@@ -121,9 +121,10 @@ def train_model(
     # Normalizing can lead to more stable training. A common way is to 
     # divide by the smallest weight, making the smallest weight 1.0.
     normalized_weights = inverse_freq_weights / inverse_freq_weights.min()
-    pos_weights_tensor = normalized_weights.to(device)
+    # pos_weights_tensor = normalized_weights.to(device)
+    pos_weights_tensor = normalized_weights.view(1, -1, 1, 1).to(device)
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights_tensor)
-
+    # criterion = nn.BCEWithLogitsLoss()
 #========================================================================================
 
     global_step = 0
@@ -152,6 +153,7 @@ def train_model(
                     else:
                         # print("masks_pred shape:", masks_pred.shape)
                         # print("true_masks shape:", true_masks.shape)
+
                         loss = criterion(masks_pred, true_masks)
                         # loss += dice_loss(
                         #     F.softmax(masks_pred, dim=1).float(),
@@ -240,8 +242,8 @@ if __name__ == '__main__':
         epochs=10, 
         batch_size=4,
         lr=0.002,
-        # load=None,
-        load='checkpoints/checkpoint_epoch1.pth',
+        load=None,
+        # load='checkpoints/checkpoint_epoch1.pth',
         scale=0.5, # delete  
         val=0.2, 
         amp=False, 
