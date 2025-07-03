@@ -23,7 +23,7 @@ import wandb
 from evaluate import evaluate
 from models.unet import UNet
 from utils.data_loading import ISIC2018Task2
-from utils.dice_score import dice_loss
+from utils.dice_score import *
 
 train_dir_img = Path('./isic2018_resized/train/ISIC2018_Task1-2_Training_Input/')
 train_dir_mask = Path('./isic2018_resized/train/ISIC2018_Task2_Training_GroundTruth_v3/')
@@ -162,8 +162,7 @@ def train_model(
                         # )
                         loss += dice_loss(
                             torch.sigmoid(masks_pred),
-                            true_masks,
-                            multiclass=False  # For multi-label binary segmentation, not multiclass
+                            true_masks
                         )
 
                 optimizer.zero_grad(set_to_none=True)
