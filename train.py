@@ -1,4 +1,4 @@
-# import argparse
+import argparse
 import logging
 import os
 import random
@@ -15,6 +15,7 @@ from tqdm import tqdm
 from utils.utils import *
 import datetime
 
+import yaml
 
 USE_WANDB = False
 if not USE_WANDB:
@@ -38,24 +39,35 @@ val_dir_mask = Path('./isic2018_resized/val/ISIC2018_Task2_Validation_GroundTrut
 dir_checkpoint = Path('./checkpoints/')
 
 
+
+
+# Load config from YAML file
+def load_config(yaml_path):
+    with open(yaml_path, 'r') as f:
+        cfg = yaml.safe_load(f)
+    return cfg
+
+
 def train_model(
-        model,
-        device,
-        epochs: int = 5,
-        batch_size: int = 1,
-        learning_rate: float = 1e-5,
-        val_percent: float = 0.1,
-        save_checkpoint: bool = True,
-        img_scale: float = 0.5,
-        amp: bool = False,
-        weight_decay: float = 1e-8,
-        momentum: float = 0.999,
-        gradient_clipping: float = 1.0,
-        model_name='',
+    model,
+    device,
+    epochs: int = 5,
+    batch_size: int = 1,
+    learning_rate: float = 1e-5,
+    val_percent: float = 0.1,
+    save_checkpoint: bool = True,
+    img_scale: float = 0.5,
+    amp: bool = False,
+    weight_decay: float = 1e-8,
+    momentum: float = 0.999,
+    gradient_clipping: float = 1.0,
+    model_name='',
+    scheduler_selector=None,
+    scheduler_config=None,
 ):
     
-    input_size_h = 256
-    input_size_w = 256
+    # input_size_h = 256
+    # input_size_w = 256
 
     val_transformer = PairCompose([
       ToTensorPair(),
@@ -106,11 +118,16 @@ def train_model(
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.Adam(model.parameters(),
-                    lr=learning_rate, weight_decay=weight_decay)    
-    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
-    #scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=3, factor=0.5)
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=learning_rate,
+        weight_decay=weight_decay
+    ) 
+    if scheduler_selector:
+        scheduler = scheduler_selector(optimizer, scheduler_config)
+    else:
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=3, factor=0.5)
+
 #=============================================== WEIGHTED LOSS =========================
     class_frequencies = torch.tensor([
     0.492,  # pigment_network
@@ -158,13 +175,15 @@ def train_model(
                     # print("masks_pred shape:", masks_pred.shape)
                     # print("true_masks shape:", true_masks.shape)
 
-                    bce_loss = criterion(masks_pred, true_masks)
                     # loss += dice_loss(
                     #     F.softmax(masks_pred, dim=1).float(),
                     #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                     #     multiclass=True
                     # )
-                    loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
+                    
+                    # bce_loss = criterion(masks_pred, true_masks)
+                    # loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
+                    loss = dice_loss(torch.sigmoid(masks_pred), true_masks)
 
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
@@ -232,99 +251,200 @@ def train_model(
 
 
 
-class HyperParams():
-    def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes, model):
-        self.epochs = epochs
-        self.batch_size = batch_size
-        self.lr = lr
-        self.load = load
-        self.scale = scale
-        self.val = val
-        self.amp = amp
-        self.bilinear = bilinear
-        self.classes = classes
-        self.model = model
-
 
 if __name__ == '__main__':
-    args = HyperParams(
-        epochs=40, 
-        batch_size=32,
-        lr=1e-4,
-        load=None,
-        #load='checkpoints/checkpoint_epoch1.pth',
-        scale=0.5, # delete  
-        val=0.2, 
-        amp=False, 
-        bilinear=True, 
-        classes=5,
-        # model='unet',
-        model='unet-attention',
-    )
+    parser = argparse.ArgumentParser(description="Train a UNet model with YAML configuration.")
+    parser.add_argument("--yaml", type=str, default="config.yaml", help="Path to YAML config file")
+    args = parser.parse_args()
+    yaml_path = args.yaml
+    config = load_config(yaml_path)
 
-    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    # --- Device selection ---
     if torch.cuda.is_available():
         device = torch.device('cuda')
     elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
         device = torch.device('mps')
     else:
-        device = torch.device('cpu')    
-    
+        device = torch.device('cpu')
     logging.info(f'Using device {device}')
 
-    # Change here to adapt to your data
-    # n_channels=3 for RGB images
-    # n_classes is the number of probabilities you want to get per pixel
-
-    if args.model == 'unet':
-        model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    elif args.model == 'unet-residual':
-        model = UNetResidual(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    elif args.model == 'unet-attention':
-        model = UNetResidualAttention(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    # --- Model selection ---
+    model_name = config.get("model", "unet") # if model not defined puts unet as default
+    if model_name == 'unet':
+        model = UNet(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
+    elif model_name == 'unet-residual':
+        model = UNetResidual(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
+    elif model_name == 'unet-attention':
+        model = UNetResidualAttention(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
     else:
-        model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+        raise ValueError(f"Unknown model: {model_name}")
+    model = model.to(memory_format=torch.channels_last).to(device)
+    
+    # --- Optional: load weights ---
+    if config.get("load"):
+        state_dict = torch.load(config["load"], map_location=device)
+        model.load_state_dict(state_dict)
+        logging.info(f'Model loaded from {config["load"]}')
+
+    # --- Scheduler selection inside train_model ---
+    def select_scheduler(optimizer, config):
+        sched_type = config.get("scheduler", "reduce_lr")
+        if sched_type == "cosine":
+            return optim.lr_scheduler.CosineAnnealingLR(
+                optimizer, 
+                T_max=config.get("t_max", config.get("epochs", 40)), 
+                eta_min=config.get("eta_min", 1e-6)
+            )
+        elif sched_type == "cosine_restart":
+            return optim.lr_scheduler.CosineAnnealingWarmRestarts(
+                optimizer,
+                T_0=config.get("t_0", 10),
+                T_mult=config.get("t_mult", 2),
+                eta_min=config.get("eta_min", 1e-6)
+            )
+        elif sched_type == "reduce_lr":
+            return optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer,
+                mode=config.get("plateau_mode", "max"),
+                patience=config.get("patience", 3),
+                factor=config.get("factor", 0.5)
+            )
+        elif sched_type == "step":
+            return optim.lr_scheduler.StepLR(
+                optimizer,
+                step_size=config.get("step_size", 10),
+                gamma=config.get("gamma", 0.1)
+            )
+        elif sched_type == "exp":
+            return optim.lr_scheduler.ExponentialLR(
+                optimizer,
+                gamma=config.get("gamma", 0.95)
+            )
+        elif sched_type == "onecycle":
+            return optim.lr_scheduler.OneCycleLR(
+                optimizer,
+                max_lr=config.get("max_lr", 1e-3),
+                steps_per_epoch=config.get("steps_per_epoch", 100),
+                epochs=config.get("epochs", 40)
+            )
+        else:
+            raise ValueError(f"Unknown scheduler: {sched_type}")
+
+    # --- Training ---
+    train_model(
+        model=model,
+        device=device,
+        epochs=config["epochs"],
+        batch_size=config["batch_size"],
+        learning_rate=config["lr"],
+        img_scale=config["scale"],
+        val_percent=config["val"] / 100,
+        amp=config["amp"],
+        weight_decay=float(config.get("weight_decay", 1e-8)),
+        momentum=config.get("momentum", 0.999),
+        model_name=model_name,
+        # pass config or scheduler selector as needed
+        scheduler_selector=select_scheduler,
+        scheduler_config=config,
+    )
+
+
+
+# class HyperParams():
+#     def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes, model):
+#         self.epochs = epochs
+#         self.batch_size = batch_size
+#         self.lr = lr
+#         self.load = load
+#         self.scale = scale
+#         self.val = val
+#         self.amp = amp
+#         self.bilinear = bilinear
+#         self.classes = classes
+#         self.model = model
+
+
+# if __name__ == '__main__':
+#     args = HyperParams(
+#         epochs=40, 
+#         batch_size=32,
+#         lr=1e-4,
+#         load=None,
+#         #load='checkpoints/checkpoint_epoch1.pth',
+#         scale=0.5, # delete  
+#         val=0.2, 
+#         amp=False, 
+#         bilinear=True, 
+#         classes=5,
+#         # model='unet',
+#         model='unet-attention',
+#     )
+
+#     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+#     if torch.cuda.is_available():
+#         device = torch.device('cuda')
+#     elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
+#         device = torch.device('mps')
+#     else:
+#         device = torch.device('cpu')    
+    
+#     logging.info(f'Using device {device}')
+
+#     # Change here to adapt to your data
+#     # n_channels=3 for RGB images
+#     # n_classes is the number of probabilities you want to get per pixel
+
+#     if args.model == 'unet':
+#         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+#     elif args.model == 'unet-residual':
+#         model = UNetResidual(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+#     elif args.model == 'unet-attention':
+#         model = UNetResidualAttention(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+#     else:
+#         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     
 
-    model = model.to(memory_format=torch.channels_last)
+#     model = model.to(memory_format=torch.channels_last)
 
-    logging.info(f'Network:\n'
-                 f'\t{model.n_channels} input channels\n'
-                 f'\t{model.n_classes} output channels (classes)\n'
-                 f'\t{"Bilinear" if model.bilinear else "Transposed conv"} upscaling')
+#     logging.info(f'Network:\n'
+#                  f'\t{model.n_channels} input channels\n'
+#                  f'\t{model.n_classes} output channels (classes)\n'
+#                  f'\t{"Bilinear" if model.bilinear else "Transposed conv"} upscaling')
 
-    if args.load:
-        state_dict = torch.load(args.load, map_location=device)
-        # del state_dict['mask_values']
-        model.load_state_dict(state_dict)
-        logging.info(f'Model loaded from {args.load}')
+#     if args.load:
+#         state_dict = torch.load(args.load, map_location=device)
+#         # del state_dict['mask_values']
+#         model.load_state_dict(state_dict)
+#         logging.info(f'Model loaded from {args.load}')
 
-    model.to(device=device)
-    try:
-        train_model(
-            model=model,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
-            device=device,
-            img_scale=args.scale,
-            val_percent=args.val / 100,
-            amp=args.amp,
-            model_name=args.model
-        )
-    except torch.cuda.OutOfMemoryError:
-        logging.error('Detected OutOfMemoryError! '
-                      'Enabling checkpointing to reduce memory usage, but this slows down training. '
-                      'Consider enabling AMP (--amp) for fast and memory efficient training')
-        torch.cuda.empty_cache()
-        model.use_checkpointing()
-        train_model(
-            model=model,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
-            device=device,
-            img_scale=args.scale,
-            val_percent=args.val / 100,
-            amp=args.amp
-        )
+#     model.to(device=device)
+#     try:
+#         train_model(
+#             model=model,
+#             epochs=args.epochs,
+#             batch_size=args.batch_size,
+#             learning_rate=args.lr,
+#             device=device,
+#             img_scale=args.scale,
+#             val_percent=args.val / 100,
+#             amp=args.amp,
+#             model_name=args.model
+#         )
+#     except torch.cuda.OutOfMemoryError:
+#         logging.error('Detected OutOfMemoryError! '
+#                       'Enabling checkpointing to reduce memory usage, but this slows down training. '
+#                       'Consider enabling AMP (--amp) for fast and memory efficient training')
+#         torch.cuda.empty_cache()
+#         model.use_checkpointing()
+#         train_model(
+#             model=model,
+#             epochs=args.epochs,
+#             batch_size=args.batch_size,
+#             learning_rate=args.lr,
+#             device=device,
+#             img_scale=args.scale,
+#             val_percent=args.val / 100,
+#             amp=args.amp
+#         )
+
+
