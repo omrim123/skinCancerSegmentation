@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from utils.dice_score import multiclass_dice_coeff, dice_coeff
+from utils.dice_score import *
 
 
 @torch.inference_mode()
@@ -10,7 +10,7 @@ def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
     dice_score = 0
-
+    jaccard_score = 0
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
         for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
@@ -28,11 +28,13 @@ def evaluate(net, dataloader, device, amp):
                 mask_pred = (F.sigmoid(mask_pred) > 0.5).float()
                 # compute the Dice score
                 dice_score += dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
+                jaccard_score += jaccard_index(mask_pred, mask_true, reduce_batch_first=False)
             else:
                 mask_true = mask_true.float()
                 mask_pred = torch.sigmoid(mask_pred)
                 # compute the Dice score for all channels
                 dice_score += multiclass_dice_coeff(mask_pred, mask_true, reduce_batch_first=False)
+                jaccard_score += multiclass_jaccard_index(mask_pred, mask_true, reduce_batch_first=False)
 
     net.train()
-    return dice_score / max(num_val_batches, 1)
+    return dice_score / max(num_val_batches, 1), jaccard_score / max(num_val_batches, 1)
