@@ -105,11 +105,11 @@ def train_model(
 
 #=============================================== WEIGHTED LOSS =========================
     class_frequencies = torch.tensor([
-    0.646,  # pigment_network
-    0.080,  # negative_network
-    0.053,  # streaks
-    0.053,  # milia_like_cyst
-    0.168,  # globules
+    0.492,  # pigment_network
+    0.061,  # negative_network
+    0.032,  # streaks
+    0.22,  # milia_like_cyst
+    0.195,  # globules
     ])
 
     # --- 2. Calculate the pos_weight tensor using inverse frequency ---
