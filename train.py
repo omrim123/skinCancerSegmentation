@@ -13,6 +13,8 @@ from torch import optim
 from torch.utils.data import DataLoader, random_split
 from tqdm import tqdm
 from utils.utils import *
+import datetime
+
 
 USE_WANDB = False
 if not USE_WANDB:
@@ -23,6 +25,7 @@ import wandb
 from evaluate import evaluate
 from models.unet import UNet
 from models.unet_residual import UNetResidual
+from models.unet_attention import UNetResidualAttention
 from utils.data_loading import ISIC2018Task2
 from utils.dice_score import *
 
@@ -48,6 +51,7 @@ def train_model(
         weight_decay: float = 1e-8,
         momentum: float = 0.999,
         gradient_clipping: float = 1.0,
+        model_name='',
 ):
     
     input_size_h = 256
@@ -160,10 +164,7 @@ def train_model(
                     #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                     #     multiclass=True
                     # )
-                    loss = bce_loss + dice_loss(
-                                      torch.sigmoid(masks_pred),
-                                      true_masks
-                                  )
+                    loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
 
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
@@ -219,12 +220,15 @@ def train_model(
                         # except:
                         #     pass
 
+
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+            # Format: YYYY-MM-DD_HH-MM-SS_modelname_epochX.pth
+            now = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            checkpoint_name = f"{now}_{model_name}_epoch{epoch}.pth"
             state_dict = model.state_dict()
-            # state_dict['mask_values'] = train_set.mask_values
-            torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
-            logging.info(f'Checkpoint {epoch} saved!')
+            torch.save(state_dict, str(dir_checkpoint / checkpoint_name))
+            logging.info(f"Checkpoint {checkpoint_name} saved!")
 
 
 
@@ -255,7 +259,7 @@ if __name__ == '__main__':
         bilinear=True, 
         classes=5,
         # model='unet',
-        model='unet-residual',
+        model='unet-attention',
     )
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
@@ -270,14 +274,18 @@ if __name__ == '__main__':
 
     # Change here to adapt to your data
     # n_channels=3 for RGB images
-    # n_classes is the number of probabilities you want to get per pixel 
+    # n_classes is the number of probabilities you want to get per pixel
+
     if args.model == 'unet':
         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     elif args.model == 'unet-residual':
         model = UNetResidual(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    elif args.model == 'unet-attention':
+        model = UNetResidualAttention(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     else:
         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
     
+
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
@@ -301,7 +309,8 @@ if __name__ == '__main__':
             device=device,
             img_scale=args.scale,
             val_percent=args.val / 100,
-            amp=args.amp
+            amp=args.amp,
+            model_name=args.model
         )
     except torch.cuda.OutOfMemoryError:
         logging.error('Detected OutOfMemoryError! '

@@ -1,6 +1,5 @@
 import torch
-from .unet_residual_parts import *
-from .unet_attention_parts import UpAttn  # Import our new UpAttn block
+from .unet_attention_parts import *  # Import our new UpAttn block
 
 
 class UNetResidualAttention(nn.Module):
