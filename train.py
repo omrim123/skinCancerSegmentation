@@ -216,8 +216,11 @@ def train_model(
                         #         histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
                         dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
-                        #scheduler.step()
-                        scheduler.step(dice_val_score)
+                        sched_type = scheduler.__class__.__name__
+                        if sched_type == "ReduceLROnPlateau":
+                            scheduler.step(dice_val_score)
+                        else:
+                            scheduler.step()
 
 
                         logging.info('Validation Dice score: {}'.format(dice_val_score))
