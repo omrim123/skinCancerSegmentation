@@ -102,7 +102,30 @@ def train_model(
                     lr=learning_rate, weight_decay=weight_decay)    
     # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'max', patience=5)  # goal: maximize Dice score
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs, eta_min=1e-6)
-    criterion = nn.BCEWithLogitsLoss()
+
+#=============================================== WEIGHTED LOSS =========================
+    class_frequencies = torch.tensor([
+    0.646,  # pigment_network
+    0.080,  # negative_network
+    0.053,  # streaks
+    0.053,  # milia_like_cyst
+    0.168,  # globules
+    ])
+
+    # --- 2. Calculate the pos_weight tensor using inverse frequency ---
+    # We add a small epsilon to avoid division by zero if a frequency is 0
+    epsilon = 1e-6
+    inverse_freq_weights = 1.0 / (class_frequencies + epsilon)
+
+    # --- (Optional but Recommended) Normalize the weights ---
+    # Normalizing can lead to more stable training. A common way is to 
+    # divide by the smallest weight, making the smallest weight 1.0.
+    normalized_weights = inverse_freq_weights / inverse_freq_weights.min()
+    pos_weights_tensor = normalized_weights.to(device)
+    criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights_tensor)
+
+#========================================================================================
+
     global_step = 0
 
     # 5. Begin training
