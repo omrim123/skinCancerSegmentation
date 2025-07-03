@@ -160,7 +160,7 @@ def train_model(
                     #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
                     #     multiclass=True
                     # )
-                    loss = 0.5 * bce_loss + 0.2 * dice_loss(
+                    loss = bce_loss + dice_loss(
                                       torch.sigmoid(masks_pred),
                                       true_masks
                                   )
