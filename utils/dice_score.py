@@ -41,11 +41,6 @@ def jaccard_index(input: Tensor, target: Tensor, epsilon: float = 1e-6):
     jaccard = (inter + epsilon) / (union + epsilon)
     return jaccard.mean() # Average Jaccard score across all classes
 
-
-# You can now remove multiclass_dice_coeff and multiclass_jaccard_index,
-# as the main functions handle it correctly.
-# The dice_loss function should now call the corrected dice_coeff.
-
 def dice_loss(input: Tensor, target: Tensor):
     # Dice loss (objective to minimize) between 0 and 1
     return 1 - dice_coeff(input, target)
