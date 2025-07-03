@@ -201,7 +201,7 @@ def train_model(
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
                 # Evaluation round
-                division_step = (n_train // (batch_size))
+                division_step = (n_train // (batch_size)) # do evaluate every 2 epochs,
                 # division_step = (n_train // (2 * batch_size)) # every 50% 
                 # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
