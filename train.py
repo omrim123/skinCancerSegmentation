@@ -37,7 +37,7 @@ val_dir_img = Path('./isic2018_resized/val/ISIC2018_Task1-2_Validation_Input/')
 val_dir_mask = Path('./isic2018_resized/val/ISIC2018_Task2_Validation_GroundTruth/')
 
 dir_checkpoint = Path('./checkpoints/')
-
+dir_images = Path('./images/')
 
 
 
@@ -64,10 +64,18 @@ def train_model(
     model_name='',
     scheduler_selector=None,
     scheduler_config=None,
+    optimizer_selector=None,
+    optimizer_config=None,
 ):
     
     # input_size_h = 256
     # input_size_w = 256
+
+    # For tracking metrics over validation steps
+    dice_scores_val = []
+    dice_scores_train = []
+    jaccard_scores_val = []
+    jaccard_scores_train = []
 
     val_transformer = PairCompose([
       ToTensorPair(),
@@ -118,11 +126,14 @@ def train_model(
     ''')
 
     # 4. Set up the optimizer, the loss, the learning rate scheduler and the loss scaling for AMP
-    optimizer = optim.Adam(
-        model.parameters(),
-        lr=learning_rate,
-        weight_decay=weight_decay
-    ) 
+    if optimizer_selector:
+        optimizer = optimizer_selector(model, optimizer_config)
+    else:
+        optimizer = optim.Adam(
+            model.parameters(),
+            lr=learning_rate,
+            weight_decay=weight_decay
+        )
     if scheduler_selector:
         scheduler = scheduler_selector(optimizer, scheduler_config)
     else:
@@ -174,12 +185,6 @@ def train_model(
                     masks_pred = model(images)
                     # print("masks_pred shape:", masks_pred.shape)
                     # print("true_masks shape:", true_masks.shape)
-
-                    # loss += dice_loss(
-                    #     F.softmax(masks_pred, dim=1).float(),
-                    #     F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                    #     multiclass=True
-                    # )
                     
                     # bce_loss = criterion(masks_pred, true_masks)
                     # loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
@@ -206,41 +211,20 @@ def train_model(
                 # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
                 if division_step > 0:
                     if global_step % division_step == 0:
-
-                        # histograms = {}
-                        # for tag, value in model.named_parameters():
-                        #     tag = tag.replace('/', '.')
-                        #     if not (torch.isinf(value) | torch.isnan(value)).any():
-                        #         histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                        #     if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
-                        #         histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
-
                         dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
+                        dice_train_score, jaccard_train_score = evaluate(model, train_loader, device, amp)
+                        dice_scores_val.append(dice_val_score)
+                        jaccard_scores_val.append(jaccard_val_score)
+                        dice_scores_train.append(dice_train_score)
+                        jaccard_scores_train.append(jaccard_train_score)
                         sched_type = scheduler.__class__.__name__
                         if sched_type == "ReduceLROnPlateau":
                             scheduler.step(dice_val_score)
                         else:
                             scheduler.step()
 
-
                         logging.info('Validation Dice score: {}'.format(dice_val_score))
                         logging.info('Validation jaccard_index: {}'.format(jaccard_val_score))
-                        # try:
-                        #     experiment.log({
-                        #         'learning rate': optimizer.param_groups[0]['lr'],
-                        #         'validation Dice': dice_val_score,
-                        #         'validation jaccard': jaccard_val_score,
-                        #         'images': wandb.Image(images[0].cpu()),
-                        #         'masks': {
-                        #             'true': wandb.Image(true_masks[0].float().cpu()),
-                        #             'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                        #         },
-                        #         'step': global_step,
-                        #         'epoch': epoch,
-                        #         **histograms
-                        #     })
-                        # except:
-                        #     pass
 
 
         if save_checkpoint:
@@ -252,6 +236,132 @@ def train_model(
             torch.save(state_dict, str(dir_checkpoint / checkpoint_name))
             logging.info(f"Checkpoint {checkpoint_name} saved!")
 
+    import matplotlib.pyplot as plt
+
+    # Gather scheduler, optimizer, and learning rate information
+    scheduler_type = None
+    optimizer_type = None
+    if scheduler_config is not None:
+        scheduler_type = scheduler_config.get("scheduler", "unknown")
+    else:
+        scheduler_type = "unknown"
+    if optimizer_config is not None:
+        optimizer_type = optimizer_config.get("optimizer", "unknown")
+    else:
+        optimizer_type = "unknown"
+
+    fig, axes = plt.subplots(1, 2, figsize=(15, 6))
+
+    val_steps = range(1, len(dice_scores_val) + 1)
+
+    # Dice subplot
+    axes[0].plot(val_steps, dice_scores_val, marker='o', label='Validation Dice')
+    axes[0].plot(val_steps, dice_scores_train, marker='x', label='Train Dice')
+    axes[0].set_xlabel("Validation Step")
+    axes[0].set_ylabel("Dice Score")
+    axes[0].set_title(f"Dice Score vs Step\nScheduler={scheduler_type}, Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}")
+    axes[0].legend()
+    axes[0].grid(True)
+
+    # Jaccard subplot
+    axes[1].plot(val_steps, jaccard_scores_val, marker='o', label='Validation Jaccard')
+    axes[1].plot(val_steps, jaccard_scores_train, marker='x', label='Train Jaccard')
+    axes[1].set_xlabel("Validation Step")
+    axes[1].set_ylabel("Jaccard Index")
+    axes[1].set_title(f"Jaccard Index vs Step\nScheduler={scheduler_type}, Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}")
+    axes[1].legend()
+    axes[1].grid(True)
+
+    fig.tight_layout()
+    plot_name = f"dice_jaccard_vs_step_{model_name}_sched-{scheduler_type}_opt-{optimizer_type}_lr-{learning_rate}_ep{epochs}.png"
+    fig.savefig(str(dir_images / plot_name))
+    plt.show()
+
+
+# --- Optimizer selection ---
+def select_optimizer(model, config):
+    opt_type = config.get("optimizer", "adam").lower()
+    lr = config.get("lr", 1e-4)
+    wd = float(config.get("weight_decay", 0.0))
+    momentum = float(config.get("momentum", 0.9))
+    if opt_type == "adam":
+        return optim.Adam(model.parameters(), lr=lr, weight_decay=wd)
+    elif opt_type == "adamw":
+        return optim.AdamW(model.parameters(), lr=lr, weight_decay=wd)
+    elif opt_type == "sgd":
+        return optim.SGD(model.parameters(), lr=lr, weight_decay=wd, momentum=momentum)
+    elif opt_type == "rmsprop":
+        return optim.RMSprop(model.parameters(), lr=lr, weight_decay=wd, momentum=momentum)
+    elif opt_type == "adagrad":
+        return optim.Adagrad(model.parameters(), lr=lr, weight_decay=wd)
+    # elif opt_type == "adabelief":
+    #     from adabelief_pytorch import AdaBelief
+    #     return AdaBelief(model.parameters(), lr=lr, weight_decay=wd)
+    else:
+        raise ValueError(f"Unknown optimizer: {opt_type}")
+
+
+# --- Scheduler selection inside train_model ---
+def select_scheduler(optimizer, config):
+    sched_type = config.get("scheduler", "reduce_lr")
+    if sched_type == "cosine":
+        return optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, 
+            T_max=config.get("t_max", config.get("epochs", 40)), 
+            eta_min=config.get("eta_min", 1e-6)
+        )
+    elif sched_type == "cosine_restart":
+        return optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer,
+            T_0=config.get("t_0", 10),
+            T_mult=config.get("t_mult", 2),
+            eta_min=config.get("eta_min", 1e-6)
+        )
+    elif sched_type == "reduce_lr":
+        return optim.lr_scheduler.ReduceLROnPlateau(
+            optimizer,
+            mode=config.get("plateau_mode", "max"),
+            patience=config.get("patience", 3),
+            factor=config.get("factor", 0.5)
+        )
+    elif sched_type == "step":
+        return optim.lr_scheduler.StepLR(
+            optimizer,
+            step_size=config.get("step_size", 10),
+            gamma=config.get("gamma", 0.1)
+        )
+    elif sched_type == "exp":
+        return optim.lr_scheduler.ExponentialLR(
+            optimizer,
+            gamma=config.get("gamma", 0.95)
+        )
+    elif sched_type == "onecycle":
+        return optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=config.get("max_lr", 1e-3),
+            steps_per_epoch=config.get("steps_per_epoch", 100),
+            epochs=config.get("epochs", 40)
+        )
+    else:
+        raise ValueError(f"Unknown scheduler: {sched_type}")
+
+
+# --- Weight initialization utility ---
+def initialize_weights(model, method="none"):
+    if method == "none":
+        return  # Use default initialization
+    for m in model.modules():
+        if isinstance(m, (nn.Conv2d, nn.Linear)):
+            if method == "xavier":
+                nn.init.xavier_uniform_(m.weight)
+            elif method == "kaiming":
+                nn.init.kaiming_normal_(m.weight)
+            elif method == "orthogonal":
+                nn.init.orthogonal_(m.weight)
+            elif method == "normal":
+                nn.init.normal_(m.weight, mean=0.0, std=0.02)
+        if hasattr(m, "bias") and m.bias is not None:
+            nn.init.constant_(m.bias, 0)
 
 
 
@@ -281,6 +391,11 @@ if __name__ == '__main__':
         model = UNetResidualAttention(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
     else:
         raise ValueError(f"Unknown model: {model_name}")
+
+    # --- Weight initialization ---
+    init_method = config.get("init", "none")
+    initialize_weights(model, method=init_method)
+
     model = model.to(memory_format=torch.channels_last).to(device)
     
     # --- Optional: load weights ---
@@ -288,50 +403,6 @@ if __name__ == '__main__':
         state_dict = torch.load(config["load"], map_location=device)
         model.load_state_dict(state_dict)
         logging.info(f'Model loaded from {config["load"]}')
-
-    # --- Scheduler selection inside train_model ---
-    def select_scheduler(optimizer, config):
-        sched_type = config.get("scheduler", "reduce_lr")
-        if sched_type == "cosine":
-            return optim.lr_scheduler.CosineAnnealingLR(
-                optimizer, 
-                T_max=config.get("t_max", config.get("epochs", 40)), 
-                eta_min=config.get("eta_min", 1e-6)
-            )
-        elif sched_type == "cosine_restart":
-            return optim.lr_scheduler.CosineAnnealingWarmRestarts(
-                optimizer,
-                T_0=config.get("t_0", 10),
-                T_mult=config.get("t_mult", 2),
-                eta_min=config.get("eta_min", 1e-6)
-            )
-        elif sched_type == "reduce_lr":
-            return optim.lr_scheduler.ReduceLROnPlateau(
-                optimizer,
-                mode=config.get("plateau_mode", "max"),
-                patience=config.get("patience", 3),
-                factor=config.get("factor", 0.5)
-            )
-        elif sched_type == "step":
-            return optim.lr_scheduler.StepLR(
-                optimizer,
-                step_size=config.get("step_size", 10),
-                gamma=config.get("gamma", 0.1)
-            )
-        elif sched_type == "exp":
-            return optim.lr_scheduler.ExponentialLR(
-                optimizer,
-                gamma=config.get("gamma", 0.95)
-            )
-        elif sched_type == "onecycle":
-            return optim.lr_scheduler.OneCycleLR(
-                optimizer,
-                max_lr=config.get("max_lr", 1e-3),
-                steps_per_epoch=config.get("steps_per_epoch", 100),
-                epochs=config.get("epochs", 40)
-            )
-        else:
-            raise ValueError(f"Unknown scheduler: {sched_type}")
 
     # --- Training ---
     train_model(
@@ -349,105 +420,6 @@ if __name__ == '__main__':
         # pass config or scheduler selector as needed
         scheduler_selector=select_scheduler,
         scheduler_config=config,
+        optimizer_selector=select_optimizer,
+        optimizer_config=config,
     )
-
-
-
-# class HyperParams():
-#     def __init__(self, epochs, batch_size, lr, load, scale, val, amp, bilinear, classes, model):
-#         self.epochs = epochs
-#         self.batch_size = batch_size
-#         self.lr = lr
-#         self.load = load
-#         self.scale = scale
-#         self.val = val
-#         self.amp = amp
-#         self.bilinear = bilinear
-#         self.classes = classes
-#         self.model = model
-
-
-# if __name__ == '__main__':
-#     args = HyperParams(
-#         epochs=40, 
-#         batch_size=32,
-#         lr=1e-4,
-#         load=None,
-#         #load='checkpoints/checkpoint_epoch1.pth',
-#         scale=0.5, # delete  
-#         val=0.2, 
-#         amp=False, 
-#         bilinear=True, 
-#         classes=5,
-#         # model='unet',
-#         model='unet-attention',
-#     )
-
-#     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-#     if torch.cuda.is_available():
-#         device = torch.device('cuda')
-#     elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
-#         device = torch.device('mps')
-#     else:
-#         device = torch.device('cpu')    
-    
-#     logging.info(f'Using device {device}')
-
-#     # Change here to adapt to your data
-#     # n_channels=3 for RGB images
-#     # n_classes is the number of probabilities you want to get per pixel
-
-#     if args.model == 'unet':
-#         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-#     elif args.model == 'unet-residual':
-#         model = UNetResidual(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-#     elif args.model == 'unet-attention':
-#         model = UNetResidualAttention(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-#     else:
-#         model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
-    
-
-#     model = model.to(memory_format=torch.channels_last)
-
-#     logging.info(f'Network:\n'
-#                  f'\t{model.n_channels} input channels\n'
-#                  f'\t{model.n_classes} output channels (classes)\n'
-#                  f'\t{"Bilinear" if model.bilinear else "Transposed conv"} upscaling')
-
-#     if args.load:
-#         state_dict = torch.load(args.load, map_location=device)
-#         # del state_dict['mask_values']
-#         model.load_state_dict(state_dict)
-#         logging.info(f'Model loaded from {args.load}')
-
-#     model.to(device=device)
-#     try:
-#         train_model(
-#             model=model,
-#             epochs=args.epochs,
-#             batch_size=args.batch_size,
-#             learning_rate=args.lr,
-#             device=device,
-#             img_scale=args.scale,
-#             val_percent=args.val / 100,
-#             amp=args.amp,
-#             model_name=args.model
-#         )
-#     except torch.cuda.OutOfMemoryError:
-#         logging.error('Detected OutOfMemoryError! '
-#                       'Enabling checkpointing to reduce memory usage, but this slows down training. '
-#                       'Consider enabling AMP (--amp) for fast and memory efficient training')
-#         torch.cuda.empty_cache()
-#         model.use_checkpointing()
-#         train_model(
-#             model=model,
-#             epochs=args.epochs,
-#             batch_size=args.batch_size,
-#             learning_rate=args.lr,
-#             device=device,
-#             img_scale=args.scale,
-#             val_percent=args.val / 100,
-#             amp=args.amp
-#         )
-
-

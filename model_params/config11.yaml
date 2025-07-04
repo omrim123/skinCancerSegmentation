@@ -2,7 +2,7 @@
 
 epochs: 15               # int: Number of training epochs (e.g., 10, 40, 100)
 batch_size: 32           # int: Batch size (e.g., 4, 8, 16, 32, 64)
-lr: 0.0001               # float: Learning rate (e.g., 0.001, 0.0001, 0.003, etc.)
+lr: 0.01               # float: Learning rate (e.g., 0.001, 0.0001, 0.003, etc.)
 load: null               # str or null: Path to checkpoint to load, or null for training from scratch
 scale: 0.5               # float: Image scaling factor (e.g., 1.0, 0.5, 0.25)
 val: 0.2                 # float: Validation split (0.0-1.0, e.g., 0.1 = 10%, 0.2 = 20%)
@@ -10,8 +10,8 @@ amp: false               # bool: Mixed precision training (true/false)
 bilinear: true           # bool: Use bilinear upsampling (true) or transposed conv (false)
 classes: 5               # int: Number of output segmentation classes (usually 1 for binary, 2+ for multi-class)
 model: unet-attention    # str: Model type ("unet", "unet-residual", "unet-attention")
-scheduler: reduce_lr     # str: LR scheduler ("reduce_lr", "cosine", "cosine_restart", "step", "exp", "onecycle")
-optimizer: adam          # str: Optimizer ("adam", "adamw", "sgd", "rmsprop", "adabelief", "adagrad")
+scheduler: exp     # str: LR scheduler ("reduce_lr", "cosine", "cosine_restart", "step", "exp", "onecycle")
+optimizer: sgd           # str: Optimizer ("adam", "adamw", "sgd", "rmsprop", "adabelief", "adagrad")
 # Recommended starting learning rates (lr):
 #   adam:      0.0001 or 0.001 (most common: 0.0001 for segmentation, can try 0.001)
 #   adamw:     0.0001 or 0.001 (similar to Adam, but regularizes better)
