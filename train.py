@@ -66,6 +66,7 @@ def train_model(
     scheduler_config=None,
     optimizer_selector=None,
     optimizer_config=None,
+    eval_every_epochs: int = 1,
 ):
     
     # input_size_h = 256
@@ -205,27 +206,21 @@ def train_model(
                 })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
-                # Evaluation round
-                division_step = (n_train // (batch_size)) # do evaluate every 2 epochs,
-                # division_step = (n_train // (2 * batch_size)) # every 50% 
-                # division_step = max(1, n_train // (40 * batch_size))  # 5% increments for tests
-                if division_step > 0:
-                    if global_step % division_step == 0:
-                        dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
-                        dice_train_score, jaccard_train_score = evaluate(model, train_loader, device, amp)
-                        dice_scores_val.append(dice_val_score)
-                        jaccard_scores_val.append(jaccard_val_score)
-                        dice_scores_train.append(dice_train_score)
-                        jaccard_scores_train.append(jaccard_train_score)
-                        sched_type = scheduler.__class__.__name__
-                        if sched_type == "ReduceLROnPlateau":
-                            scheduler.step(dice_val_score)
-                        else:
-                            scheduler.step()
-
-                        logging.info('Validation Dice score: {}'.format(dice_val_score))
-                        logging.info('Validation jaccard_index: {}'.format(jaccard_val_score))
-
+        # Evaluation at the end of each epoch if required
+        if epoch % eval_every_epochs == 0:
+            dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
+            dice_train_score, jaccard_train_score = evaluate(model, train_loader, device, amp)
+            dice_scores_val.append(dice_val_score)
+            jaccard_scores_val.append(jaccard_val_score)
+            dice_scores_train.append(dice_train_score)
+            jaccard_scores_train.append(jaccard_train_score)
+            sched_type = scheduler.__class__.__name__
+            if sched_type == "ReduceLROnPlateau":
+                scheduler.step(dice_val_score)
+            else:
+                scheduler.step()
+            logging.info('Validation Dice score: {}'.format(dice_val_score))
+            logging.info('Validation jaccard_index: {}'.format(jaccard_val_score))
 
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -422,4 +417,5 @@ if __name__ == '__main__':
         scheduler_config=config,
         optimizer_selector=select_optimizer,
         optimizer_config=config,
+        eval_every_epochs=config.get("eval_every_epochs", 1),
     )
