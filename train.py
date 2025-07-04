@@ -219,9 +219,10 @@ def train_model(
                 scheduler.step(dice_val_score)
             else:
                 scheduler.step()
-            logging.info('Validation Dice score: {}'.format(dice_val_score))
-            logging.info('Validation jaccard_index: {}'.format(jaccard_val_score))
+            tqdm.write(f'Validation Dice score: {dice_val_score}')
+            tqdm.write(f'Validation jaccard_index: {jaccard_val_score}')
 
+            
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             # Format: YYYY-MM-DD_HH-MM-SS_modelname_epochX.pth
