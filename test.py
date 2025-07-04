@@ -81,22 +81,28 @@ def main():
     # --- Model loading ---
     model = load_model(model_name, n_channels=3, n_classes=n_classes, bilinear=bilinear, device=device, checkpoint_path=args.checkpoint)
 
-    # --- Evaluation ---
-    dice_total, jaccard_total, num_batches = 0.0, 0.0, 0
+    # --- Evaluation (batch-size invariant, global metrics) ---
+    all_preds = []
+    all_targets = []
     model.eval()
     with torch.no_grad():
         for batch in test_loader:
             images = batch['image'].to(device, dtype=torch.float32, memory_format=torch.channels_last)
             masks_true = batch['mask'].to(device, dtype=torch.float32)
             masks_pred = torch.sigmoid(model(images))
-            dice_score = dice_coeff(masks_pred, masks_true)
-            jac_score = jaccard_index(masks_pred, masks_true)
-            dice_total += dice_score.item()
-            jaccard_total += jac_score.item()
-            num_batches += 1
+            all_preds.append(masks_pred.cpu())
+            all_targets.append(masks_true.cpu())
+
+    # Concatenate all predictions and targets
+    all_preds = torch.cat(all_preds, dim=0)
+    all_targets = torch.cat(all_targets, dim=0)
+
+    dice_score = dice_coeff(all_preds, all_targets)
+    jac_score = jaccard_index(all_preds, all_targets)
+
     print("Evaluation complete!")
-    print(f"Average Dice score:    {dice_total / num_batches:.4f}")
-    print(f"Average Jaccard index: {jaccard_total / num_batches:.4f}")
+    print(f"Global Dice score:    {dice_score:.4f}")
+    print(f"Global Jaccard index: {jac_score:.4f}")
 
 if __name__ == "__main__":
     main()

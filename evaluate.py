@@ -9,8 +9,8 @@ from utils.dice_score import *
 def evaluate(net, dataloader, device, amp):
     net.eval()
     num_val_batches = len(dataloader)
-    dice_score = 0
-    jaccard_score = 0
+    preds = []
+    targets = []
     # iterate over the validation set
     with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
         for batch in tqdm(dataloader, total=num_val_batches, desc='Validation round', unit='batch', leave=False):
@@ -29,8 +29,11 @@ def evaluate(net, dataloader, device, amp):
             mask_pred_probs = torch.sigmoid(mask_pred)
             mask_pred_binary = (mask_pred_probs > 0.5).float()
 
-            # compute the Dice score for all channels using the corrected function
-            dice_score += dice_coeff(mask_pred_binary, mask_true)
-            jaccard_score += jaccard_index(mask_pred_binary, mask_true)
+            preds.append(mask_pred_binary)
+            targets.append(mask_true)
     net.train()
-    return dice_score / max(num_val_batches, 1), jaccard_score / max(num_val_batches, 1)
+    preds = torch.cat(preds, dim=0)
+    targets = torch.cat(targets, dim=0)
+    dice_score = dice_coeff(preds, targets)
+    jaccard_score = jaccard_index(preds, targets)
+    return dice_score, jaccard_score
