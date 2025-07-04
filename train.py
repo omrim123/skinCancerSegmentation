@@ -210,10 +210,10 @@ def train_model(
         if epoch % eval_every_epochs == 0:
             dice_val_score, jaccard_val_score = evaluate(model, val_loader, device, amp)
             dice_train_score, jaccard_train_score = evaluate(model, train_loader, device, amp)
-            dice_scores_val.append(dice_val_score)
-            jaccard_scores_val.append(jaccard_val_score)
-            dice_scores_train.append(dice_train_score)
-            jaccard_scores_train.append(jaccard_train_score)
+            dice_scores_val.append(float(dice_val_score))
+            jaccard_scores_val.append(float(jaccard_val_score))
+            dice_scores_train.append(float(dice_train_score))
+            jaccard_scores_train.append(float(jaccard_train_score))
             sched_type = scheduler.__class__.__name__
             if sched_type == "ReduceLROnPlateau":
                 scheduler.step(dice_val_score)
