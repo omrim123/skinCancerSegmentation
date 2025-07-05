@@ -22,6 +22,8 @@ if not USE_WANDB:
     os.environ["WANDB_MODE"] = "disabled"
 import wandb
 
+from models.unet_convnext_attention import UNetConvNeXtAttention
+
 
 from evaluate import evaluate
 from models.unet import UNet
@@ -184,8 +186,8 @@ def train_model(
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    # print("masks_pred shape:", masks_pred.shape)
-                    # print("true_masks shape:", true_masks.shape)
+                    print("masks_pred shape:", masks_pred.shape)
+                    print("true_masks shape:", true_masks.shape)
                     
                     # bce_loss = criterion(masks_pred, true_masks)
                     # loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
@@ -343,10 +345,19 @@ def select_scheduler(optimizer, config):
 
 
 # --- Weight initialization utility ---
-def initialize_weights(model, method="none"):
+def initialize_weights(model, method="none", exclude=None):
     if method == "none":
         return  # Use default initialization
     for m in model.modules():
+        # If m is within the excluded module (e.g., model.encoder), skip it
+        if exclude is not None:
+            # Check if m is part of exclude (works for nn.Module or list of nn.Module)
+            if isinstance(exclude, nn.Module):
+                if any(m is mod for mod in exclude.modules()):
+                    continue
+            elif isinstance(exclude, (list, tuple)):
+                if any(any(m is mod for mod in exc.modules()) for exc in exclude):
+                    continue
         if isinstance(m, (nn.Conv2d, nn.Linear)):
             if method == "xavier":
                 nn.init.xavier_uniform_(m.weight)
@@ -387,12 +398,25 @@ if __name__ == '__main__':
         model = UNetResidual(n_channels=3, n_classes=n_classes, bilinear=bilinear)
     elif model_name == 'unet-attention':
         model = UNetResidualAttention(n_channels=3, n_classes=n_classes, bilinear=bilinear)
+    elif model_name == 'unet-convnext-attention':
+        encoder_type = config.get("encoder", "convnext_tiny")
+        pretrained = bool(config.get("pretrained", True))
+        # You can parametrize decoder_attention, here we set it to True by default
+        model = UNetConvNeXtAttention(
+            n_channels=3,        # or 5 if your input is 5-channel!
+            n_classes=n_classes,
+            bilinear=True,       # or False if you want transposed conv
+            pretrained=pretrained
+        )
     else:
         raise ValueError(f"Unknown model: {model_name}")
 
     # --- Weight initialization ---
     init_method = config.get("init", "none")
-    initialize_weights(model, method=init_method)
+    if model_name == 'unet-convnext-attention' and hasattr(model, "encoder"):
+        initialize_weights(model, method=init_method, exclude=model.encoder)
+    else:
+        initialize_weights(model, method=init_method)
 
     model = model.to(memory_format=torch.channels_last).to(device)
     
