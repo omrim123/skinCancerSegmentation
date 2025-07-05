@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from utils.dice_score import *
+from utils.score_loss_functions import *
 
 
 @torch.inference_mode()

@@ -1,10 +1,12 @@
 import argparse
 import torch
+from torch import Tensor
+
 from pathlib import Path
 import yaml
 
 from utils.data_loading import ISIC2018Task2
-from utils.dice_score import dice_coeff, jaccard_index
+from utils.score_loss_functions import dice_coeff, jaccard_index
 from models.unet import UNet
 from models.unet_residual import UNetResidual
 from models.unet_attention import UNetResidualAttention
@@ -14,6 +16,26 @@ from train import PairCompose, ToTensorPair, MyNormalize
 
 
 #COMMAND: python test.py --checkpoint checkpoints/2025-07-03_17-44-50_unet-attention_epoch9.pth --yaml model_params/config1.yaml
+
+def dice_coeff_test(input: Tensor, target: Tensor, epsilon: float = 1e-6):
+    """
+    Computes the Dice coefficient for multi-label segmentation.
+    Expects input of shape (N, C, H, W).
+    Computes the Dice score for each class and averages them.
+    """
+    assert input.size() == target.size()
+    assert input.dim() == 4, "Input must be a 4D tensor (N, C, H, W)"
+
+    # Sum over batch and spatial dimensions (N, H, W) for each class
+    inter = (input * target).sum(dim=(0, 2, 3))
+    sets_sum = input.sum(dim=(0, 2, 3)) + target.sum(dim=(0, 2, 3))
+
+    # Handle cases where a class is not present in either input or target
+    sets_sum = torch.where(sets_sum == 0, inter, sets_sum)
+
+    dice = (2 * inter + epsilon) / (sets_sum + epsilon)
+    return dice.mean(), dice # Average Dice score across all classes
+
 
 
 def load_config(yaml_path):
@@ -97,11 +119,12 @@ def main():
     all_preds = torch.cat(all_preds, dim=0)
     all_targets = torch.cat(all_targets, dim=0)
 
-    dice_score = dice_coeff(all_preds, all_targets)
+    dice_score_mean, dice_score_vec = dice_coeff_test(all_preds, all_targets)
     jac_score = jaccard_index(all_preds, all_targets)
 
+    print("dice_score_vec: ", dice_score_vec)
     print("Evaluation complete!")
-    print(f"Global Dice score:    {dice_score:.4f}")
+    print(f"Global Dice score:    {dice_score_mean:.4f}")
     print(f"Global Jaccard index: {jac_score:.4f}")
 
 if __name__ == "__main__":

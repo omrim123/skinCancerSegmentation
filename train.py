@@ -24,7 +24,7 @@ from models.unet import UNet
 from models.unet_residual import UNetResidual
 from models.unet_attention import UNetResidualAttention
 from utils.data_loading import ISIC2018Task2
-from utils.dice_score import *
+from utils.score_loss_functions import *
 
 train_dir_img = Path('./isic2018_resized/train/ISIC2018_Task1-2_Training_Input/')
 train_dir_mask = Path('./isic2018_resized/train/ISIC2018_Task2_Training_GroundTruth_v3/')
@@ -179,7 +179,11 @@ def train_model(
                     
                     # bce_loss = criterion(masks_pred, true_masks)
                     # loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
-                    loss = dice_loss(torch.sigmoid(masks_pred), true_masks)
+                    if False:
+                        loss = dice_loss(torch.sigmoid(masks_pred), true_masks)
+                    else:
+                        loss = (dice_loss_vec(torch.sigmoid(masks_pred), true_masks) * normalized_weights).sum()
+
 
                 optimizer.zero_grad(set_to_none=True)
                 loss.backward()
