@@ -2,9 +2,6 @@ import torch
 from torch import Tensor
 
 
-
-# In dice_score.py
-
 def dice_coeff(input: Tensor, target: Tensor, epsilon: float = 1e-6):
     """
     Computes the Dice coefficient for multi-label segmentation.

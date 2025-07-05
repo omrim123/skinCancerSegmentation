@@ -4,7 +4,6 @@ import numpy as np
 import torch
 import torchvision.transforms.functional as TF
 
-# 1) A Compose that threads an (img,mask) tuple through your transforms
 class PairCompose:
     def __init__(self, transforms):
         self.transforms = transforms
@@ -16,8 +15,6 @@ class PairCompose:
         return img, mask
 
 
-# 2) A ToTensor that handles both image and mask
-# Corrected ToTensorPair class in utils.py
 class ToTensorPair:
     def __call__(self, img, mask):
         # img: H×W×C numpy array
@@ -31,7 +28,7 @@ class ToTensorPair:
         
         return img_t, mask_t
 
-# 3) Random flips & rotation for both, using functional API
+
 class RandomHorizontalFlipPair:
     def __init__(self, p=0.5): self.p = p
     def __call__(self, img, mask):
@@ -58,7 +55,6 @@ class RandomRotationPair:
         )
 
 
-# 4) A Resize that also keeps mask integer
 class ResizePair:
     def __init__(self, h, w):
         self.size = (h, w)
@@ -68,7 +64,6 @@ class ResizePair:
         return img_r, mask_r
 
 
-# 5)
 class MyNormalize:
     def __init__(self, mean, std):
         self.mean = mean

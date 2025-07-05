@@ -15,7 +15,6 @@ def resize_folder(input_folder, output_folder, size=(256, 256), is_mask=False):
             img_resized.save(out_path)
             print(f"Resized {in_path} -> {out_path}")
 
-# The subdirectories from your extraction logic
 DATA_FOLDERS = [
     ("isic2018_task2/train/ISIC2018_Task1-2_Training_Input", "isic2018_resized/train/ISIC2018_Task1-2_Training_Input"),
     ("isic2018_task2/train/ISIC2018_Task2_Training_GroundTruth_v3", "isic2018_resized/train/ISIC2018_Task2_Training_GroundTruth_v3"),

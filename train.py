@@ -16,12 +16,6 @@ from utils.utils import *
 import datetime
 
 import yaml
-
-USE_WANDB = False
-if not USE_WANDB:
-    os.environ["WANDB_MODE"] = "disabled"
-import wandb
-
 from models.unet_convnext_attention import UNetConvNeXtAttention
 
 
@@ -95,7 +89,7 @@ def train_model(
 
     # 1. Create dataset
     try:
-        train_set = ISIC2018Task2(train_dir_img, train_dir_mask,transform=train_transformer) # TODO add preprocess
+        train_set = ISIC2018Task2(train_dir_img, train_dir_mask,transform=train_transformer) 
         val_set = ISIC2018Task2(val_dir_img, val_dir_mask,transform=val_transformer)
     except (AssertionError, RuntimeError, IndexError):
         logging.error("failed initializing ISIC2018Task2")
@@ -109,12 +103,6 @@ def train_model(
     train_loader = DataLoader(train_set, shuffle=True, **loader_args)
     val_loader = DataLoader(val_set, shuffle=False, drop_last=True, **loader_args)
 
-    # (Initialize logging)
-    experiment = wandb.init(project='U-Net', resume='allow', anonymous='must')
-    experiment.config.update(
-        dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-             val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
-    )
 
     logging.info(f'''Starting training:
         Epochs:          {epochs}
@@ -201,11 +189,6 @@ def train_model(
                 pbar.update(images.shape[0])
                 global_step += 1
                 epoch_loss += loss.item()
-                experiment.log({
-                    'train loss': loss.item(),
-                    'step': global_step,
-                    'epoch': epoch
-                })
                 pbar.set_postfix(**{'loss (batch)': loss.item()})
 
         # Evaluation at the end of each epoch if required
@@ -462,12 +445,3 @@ if __name__ == '__main__':
         eval_every_epochs=int(config.get("eval_every_epochs", 1)),
     )
 
-
-'''
-
-            globules    milia
-globules                
-mila
-
-
-'''

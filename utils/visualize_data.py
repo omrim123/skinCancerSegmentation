@@ -3,8 +3,7 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 
-# Edit this if you use resized data
-# MASKS_FOLDER = "../isic2018_resized/train/ISIC2018_Task2_Training_GroundTruth_v3"
+
 MASKS_FOLDER = "../isic2018_resized/val/ISIC2018_Task2_Validation_GroundTruth"
 
 ATTRIBUTES = [

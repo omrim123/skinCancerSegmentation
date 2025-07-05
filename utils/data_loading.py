@@ -47,7 +47,7 @@ class ISIC2018Task2(Dataset):
 
         mask = np.stack(masks, axis=0)  # (5, H, W)
         # print("Final mask shape returned by __getitem__:", mask.shape)
-        # --- apply any joint transforms (if given) ---
+
         if self.transform:
             # print(self.transform)
             img, mask = self.transform((img, mask))

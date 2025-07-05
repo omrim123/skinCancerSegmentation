@@ -5,14 +5,12 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-# --- Important: Make sure these imports match your project structure ---
 from utils.data_loading import ISIC2018Task2
 from models.unet import UNet
 from models.unet_residual import UNetResidual
 from models.unet_attention import UNetResidualAttention
-from train import PairCompose, ToTensorPair, MyNormalize # Using MyNormalize from train.py
+from train import PairCompose, ToTensorPair, MyNormalize 
 
-# --- Define class names based on train.py for plot titles ---
 CLASS_NAMES = [
     'Pigment Network',
     'Negative Network',
@@ -26,7 +24,6 @@ def load_config(yaml_path):
         return yaml.safe_load(f)
 
 def load_model(model_type, n_channels, n_classes, bilinear, device, checkpoint_path):
-    # This function is copied from your test.py
     if model_type == 'unet':
         model = UNet(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
     elif model_type == 'unet-residual':
@@ -43,7 +40,7 @@ def load_model(model_type, n_channels, n_classes, bilinear, device, checkpoint_p
 
 def unnormalize(tensor, mean, std):
     """Reverses the normalization on a tensor image."""
-    tensor = tensor.clone() # Avoid modifying the original tensor
+    tensor = tensor.clone() 
     for t, m, s in zip(tensor, mean, std):
         t.mul_(s).add_(m)
     return tensor
