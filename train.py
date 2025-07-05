@@ -334,7 +334,7 @@ def select_scheduler(optimizer, config):
             optimizer,
             mode=config.get("plateau_mode", "max"),
             patience=int(config.get("patience", 3)),
-            factor=float(config.get("factor", 0.7)) # prev was 0.5
+            factor=float(config.get("factor", 0.5)) # prev was 0.5
         )
     elif sched_type == "step":
         return optim.lr_scheduler.StepLR(
@@ -351,7 +351,7 @@ def select_scheduler(optimizer, config):
         return optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=float(config.get("max_lr", 1e-3)),
-            steps_per_epoch= 2954 // int(config.get("batch_size", 32)) + 1,
+            steps_per_epoch= int(config.get("steps_per_epoch", 100)),
             epochs=int(config.get("epochs", 40))
         )
     else:
