@@ -48,6 +48,7 @@ class UNetConvNeXtAttention(nn.Module):
         self.up3 = UpAttn(in_channels=192, skip_channels=96, out_channels=96, bilinear=bilinear)
         self.up4 = UpAttn(in_channels=96,  skip_channels=96, out_channels=96, bilinear=bilinear)
         self.outc = OutConv(96, n_classes)
+        self.final_upsample = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
 
     def forward(self, x):
         feats = self.encoder(x)
@@ -61,4 +62,5 @@ class UNetConvNeXtAttention(nn.Module):
         x = self.up3(x, f1)
         x = self.up4(x, f1)
         logits = self.outc(x)
+        logits = self.final_upsample(logits) # added for upsampling
         return logits

@@ -186,8 +186,8 @@ def train_model(
 
                 with torch.autocast(device.type if device.type != 'mps' else 'cpu', enabled=amp):
                     masks_pred = model(images)
-                    print("masks_pred shape:", masks_pred.shape)
-                    print("true_masks shape:", true_masks.shape)
+                    # print("masks_pred shape:", masks_pred.shape)
+                    # print("true_masks shape:", true_masks.shape)
                     
                     # bce_loss = criterion(masks_pred, true_masks)
                     # loss = bce_loss + dice_loss(torch.sigmoid(masks_pred), true_masks)
@@ -257,7 +257,10 @@ def train_model(
     axes[0].plot(val_steps, dice_scores_train, marker='x', label='Train Dice')
     axes[0].set_xlabel("Validation Step")
     axes[0].set_ylabel("Dice Score")
-    axes[0].set_title(f"Dice Score vs Step\nScheduler={scheduler_type}, Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}")
+    axes[0].set_title(
+        f"Dice Score vs Step\nModel={model_name}, Scheduler={scheduler_type}, "
+        f"Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}"
+    )
     axes[0].legend()
     axes[0].grid(True)
 
@@ -266,12 +269,18 @@ def train_model(
     axes[1].plot(val_steps, jaccard_scores_train, marker='x', label='Train Jaccard')
     axes[1].set_xlabel("Validation Step")
     axes[1].set_ylabel("Jaccard Index")
-    axes[1].set_title(f"Jaccard Index vs Step\nScheduler={scheduler_type}, Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}")
+    axes[1].set_title(
+        f"Jaccard Index vs Step\nModel={model_name}, Scheduler={scheduler_type}, "
+        f"Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}"
+    )
     axes[1].legend()
     axes[1].grid(True)
 
     fig.tight_layout()
-    plot_name = f"dice_jaccard_vs_step_{model_name}_sched-{scheduler_type}_opt-{optimizer_type}_lr-{learning_rate}_ep{epochs}.png"
+    plot_name = (
+        f"dice_jaccard_vs_step_{model_name}_model-{model_name}_"
+        f"sched-{scheduler_type}_opt-{optimizer_type}_lr-{learning_rate}_ep{epochs}.png"
+    )
     fig.savefig(str(dir_images / plot_name))
     plt.show()
 
