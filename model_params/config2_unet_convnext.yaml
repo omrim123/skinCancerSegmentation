@@ -1,6 +1,6 @@
 # config1.yaml
 
-epochs: 15               # int: Number of training epochs (e.g., 10, 40, 100)
+epochs: 100               # int: Number of training epochs (e.g., 10, 40, 100)
 batch_size: 32           # int: Batch size (e.g., 4, 8, 16, 32, 64)
 lr: 0.0001               # float: Learning rate (e.g., 0.001, 0.0001, 0.003, etc.)
 load: null               # str or null: Path to checkpoint to load, or null for training from scratch
