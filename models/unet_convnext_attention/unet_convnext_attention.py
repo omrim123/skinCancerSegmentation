@@ -38,7 +38,7 @@ class ConvNeXtEncoder(nn.Module):
 
 
 class UNetConvNeXtAttention(nn.Module):
-    def __init__(self, n_channels=5, n_classes=5, bilinear=True, pretrained=True):
+    def __init__(self, n_channels=5, n_classes=5, bilinear=True, pretrained=True, freeze_encoder=False):
         super().__init__()
         self.n_channels = n_channels
         self.n_classes = n_classes
@@ -49,6 +49,10 @@ class UNetConvNeXtAttention(nn.Module):
         self.up4 = UpAttn(in_channels=96,  skip_channels=96, out_channels=96, bilinear=bilinear)
         self.outc = OutConv(96, n_classes)
         self.final_upsample = nn.Upsample(scale_factor=4, mode='bilinear', align_corners=True)
+        # Freeze encoder if requested
+        if freeze_encoder:
+            for param in self.encoder.parameters():
+                param.requires_grad = False
 
     def forward(self, x):
         feats = self.encoder(x)

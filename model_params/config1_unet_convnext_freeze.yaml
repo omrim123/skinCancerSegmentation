@@ -10,9 +10,10 @@ amp: false               # bool: Mixed precision training (true/false)
 bilinear: true           # bool: Use bilinear upsampling (true) or transposed conv (false)
 classes: 5               # int: Number of output segmentation classes (usually 1 for binary, 2+ for multi-class)
 model: unet-convnext-attention      # str: Model type ("unet", "unet-residual", "unet-attention", "unet-convnext-attention")
+freeze_encoder: true
 # encoder: convnext_tiny              # str: Encoder backbone ("convnext_tiny", "convnext_base", etc.)
 pretrained: true                    # bool: Use ImageNet pretrained weights for encoder (true/false)
-scheduler: step          # str: LR scheduler ("reduce_lr", "cosine", "cosine_restart", "step", "exp", "onecycle")
+scheduler: onecycle     # str: LR scheduler ("reduce_lr", "cosine", "cosine_restart", "step", "exp", "onecycle")
 optimizer: adam          # str: Optimizer ("adam", "adamw", "sgd", "rmsprop", "adabelief", "adagrad")
 # Recommended starting learning rates (lr):
 #   adam:      0.0001 or 0.001 (most common: 0.0001 for segmentation, can try 0.001)

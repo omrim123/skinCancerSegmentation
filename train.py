@@ -258,9 +258,12 @@ def train_model(
     axes[0].set_xlabel("Validation Step")
     axes[0].set_ylabel("Dice Score")
     axes[0].set_title(
-        f"Dice Score vs Step\nModel={model_name}, Scheduler={scheduler_type}, "
-        f"Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}"
+        f"Dice Score vs Step\n"
+        f"Model={model_name}\n"
+        f"Scheduler={scheduler_type}, Optimizer={optimizer_type}\n"
+        f"LR={learning_rate}, Epochs={epochs}"
     )
+
     axes[0].legend()
     axes[0].grid(True)
 
@@ -270,8 +273,10 @@ def train_model(
     axes[1].set_xlabel("Validation Step")
     axes[1].set_ylabel("Jaccard Index")
     axes[1].set_title(
-        f"Jaccard Index vs Step\nModel={model_name}, Scheduler={scheduler_type}, "
-        f"Optimizer={optimizer_type}, LR={learning_rate}, Epochs={epochs}"
+        f"Jaccard Index vs Step\n"
+        f"Model={model_name}\n"
+        f"Scheduler={scheduler_type}, Optimizer={optimizer_type}\n"
+        f"LR={learning_rate}, Epochs={epochs}"
     )
     axes[1].legend()
     axes[1].grid(True)
@@ -329,7 +334,7 @@ def select_scheduler(optimizer, config):
             optimizer,
             mode=config.get("plateau_mode", "max"),
             patience=int(config.get("patience", 3)),
-            factor=float(config.get("factor", 0.5))
+            factor=float(config.get("factor", 0.7)) # prev was 0.5
         )
     elif sched_type == "step":
         return optim.lr_scheduler.StepLR(
@@ -346,7 +351,7 @@ def select_scheduler(optimizer, config):
         return optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=float(config.get("max_lr", 1e-3)),
-            steps_per_epoch=int(config.get("steps_per_epoch", 100)),
+            steps_per_epoch= 2954 // int(config.get("batch_size", 32)) + 1,
             epochs=int(config.get("epochs", 40))
         )
     else:
@@ -415,7 +420,8 @@ if __name__ == '__main__':
             n_channels=3,        # or 5 if your input is 5-channel!
             n_classes=n_classes,
             bilinear=True,       # or False if you want transposed conv
-            pretrained=pretrained
+            pretrained=pretrained,
+            freeze_encoder=bool(config.get("freeze_encoder", False))  # or False
         )
     else:
         raise ValueError(f"Unknown model: {model_name}")
