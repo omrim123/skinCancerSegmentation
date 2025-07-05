@@ -182,6 +182,7 @@ def train_model(
                     if False:
                         loss = dice_loss(torch.sigmoid(masks_pred), true_masks)
                     else:
+                        normalized_weights = normalized_weights.to(device=device, dtype=torch.float32)
                         loss = (dice_loss_vec(torch.sigmoid(masks_pred), true_masks) * normalized_weights).sum()
 
 
