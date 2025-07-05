@@ -222,7 +222,7 @@ def train_model(
             tqdm.write(f'Validation Dice score: {dice_val_score}')
             tqdm.write(f'Validation jaccard_index: {jaccard_val_score}')
 
-            
+
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             # Format: YYYY-MM-DD_HH-MM-SS_modelname_epochX.pth
@@ -277,7 +277,7 @@ def train_model(
 # --- Optimizer selection ---
 def select_optimizer(model, config):
     opt_type = config.get("optimizer", "adam").lower()
-    lr = config.get("lr", 1e-4)
+    lr = float(config.get("lr", 1e-4))
     wd = float(config.get("weight_decay", 0.0))
     momentum = float(config.get("momentum", 0.9))
     if opt_type == "adam":
@@ -302,41 +302,41 @@ def select_scheduler(optimizer, config):
     sched_type = config.get("scheduler", "reduce_lr")
     if sched_type == "cosine":
         return optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, 
-            T_max=config.get("t_max", config.get("epochs", 40)), 
-            eta_min=config.get("eta_min", 1e-6)
+            optimizer,
+            T_max=int(config.get("t_max", int(config.get("epochs", 40)))),
+            eta_min=float(config.get("eta_min", 1e-6))
         )
     elif sched_type == "cosine_restart":
         return optim.lr_scheduler.CosineAnnealingWarmRestarts(
             optimizer,
-            T_0=config.get("t_0", 10),
-            T_mult=config.get("t_mult", 2),
-            eta_min=config.get("eta_min", 1e-6)
+            T_0=int(config.get("t_0", 10)),
+            T_mult=int(config.get("t_mult", 2)),
+            eta_min=float(config.get("eta_min", 1e-6))
         )
     elif sched_type == "reduce_lr":
         return optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode=config.get("plateau_mode", "max"),
-            patience=config.get("patience", 3),
-            factor=config.get("factor", 0.5)
+            patience=int(config.get("patience", 3)),
+            factor=float(config.get("factor", 0.5))
         )
     elif sched_type == "step":
         return optim.lr_scheduler.StepLR(
             optimizer,
-            step_size=config.get("step_size", 10),
-            gamma=config.get("gamma", 0.1)
+            step_size=int(config.get("step_size", 10)),
+            gamma=float(config.get("gamma", 0.1))
         )
     elif sched_type == "exp":
         return optim.lr_scheduler.ExponentialLR(
             optimizer,
-            gamma=config.get("gamma", 0.95)
+            gamma=float(config.get("gamma", 0.95))
         )
     elif sched_type == "onecycle":
         return optim.lr_scheduler.OneCycleLR(
             optimizer,
-            max_lr=config.get("max_lr", 1e-3),
-            steps_per_epoch=config.get("steps_per_epoch", 100),
-            epochs=config.get("epochs", 40)
+            max_lr=float(config.get("max_lr", 1e-3)),
+            steps_per_epoch=int(config.get("steps_per_epoch", 100)),
+            epochs=int(config.get("epochs", 40))
         )
     else:
         raise ValueError(f"Unknown scheduler: {sched_type}")
@@ -379,12 +379,14 @@ if __name__ == '__main__':
 
     # --- Model selection ---
     model_name = config.get("model", "unet") # if model not defined puts unet as default
+    n_classes = int(config["classes"])
+    bilinear = config["bilinear"]
     if model_name == 'unet':
-        model = UNet(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
+        model = UNet(n_channels=3, n_classes=n_classes, bilinear=bilinear)
     elif model_name == 'unet-residual':
-        model = UNetResidual(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
+        model = UNetResidual(n_channels=3, n_classes=n_classes, bilinear=bilinear)
     elif model_name == 'unet-attention':
-        model = UNetResidualAttention(n_channels=3, n_classes=config["classes"], bilinear=config["bilinear"])
+        model = UNetResidualAttention(n_channels=3, n_classes=n_classes, bilinear=bilinear)
     else:
         raise ValueError(f"Unknown model: {model_name}")
 
@@ -404,19 +406,29 @@ if __name__ == '__main__':
     train_model(
         model=model,
         device=device,
-        epochs=config["epochs"],
-        batch_size=config["batch_size"],
-        learning_rate=config["lr"],
-        img_scale=config["scale"],
-        val_percent=config["val"] / 100,
-        amp=config["amp"],
+        epochs=int(config["epochs"]),
+        batch_size=int(config["batch_size"]),
+        learning_rate=float(config["lr"]),
+        img_scale=float(config["scale"]),
+        val_percent=float(config["val"]) / 100,
+        amp=bool(config["amp"]),
         weight_decay=float(config.get("weight_decay", 1e-8)),
-        momentum=config.get("momentum", 0.999),
+        momentum=float(config.get("momentum", 0.999)),
         model_name=model_name,
         # pass config or scheduler selector as needed
         scheduler_selector=select_scheduler,
         scheduler_config=config,
         optimizer_selector=select_optimizer,
         optimizer_config=config,
-        eval_every_epochs=config.get("eval_every_epochs", 1),
+        eval_every_epochs=int(config.get("eval_every_epochs", 1)),
     )
+
+
+'''
+
+            globules    milia
+globules                
+mila
+
+
+'''

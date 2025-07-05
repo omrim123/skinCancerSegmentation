@@ -44,3 +44,7 @@ def jaccard_index(input: Tensor, target: Tensor, epsilon: float = 1e-6):
 def dice_loss(input: Tensor, target: Tensor):
     # Dice loss (objective to minimize) between 0 and 1
     return 1 - dice_coeff(input, target)
+
+def jaccard_loss(input: Tensor, target: Tensor):
+    # Jaccard loss (objective to minimize) between 0 and 1
+    return 1 - jaccard_index(input, target)
