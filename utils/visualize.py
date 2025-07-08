@@ -9,7 +9,12 @@ from utils.data_loading import ISIC2018Task2
 from models.unet import UNet
 from models.unet_residual import UNetResidual
 from models.unet_attention import UNetResidualAttention
+from models.unet_convnext_attention import UNetConvNeXtAttention
 from train import PairCompose, ToTensorPair, MyNormalize 
+
+'''
+python -m utils.visualize --checkpoint ./images/top3_convnext_regular_loss/2025-07-05_15-37-31_unet-convnext-attention_epoch23_best_0.2052_jaccard_reducelr.pth --yaml ./model_params/unet_convnext_configs/config1_unet_convnext.yam --image-index 78 --train 0
+'''
 
 CLASS_NAMES = [
     'Pigment Network',
@@ -30,6 +35,8 @@ def load_model(model_type, n_channels, n_classes, bilinear, device, checkpoint_p
         model = UNetResidual(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
     elif model_type == 'unet-attention':
         model = UNetResidualAttention(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
+    elif model_type == 'unet-convnext-attention':
+        model = UNetConvNeXtAttention(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     model = model.to(memory_format=torch.channels_last).to(device)

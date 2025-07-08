@@ -10,12 +10,13 @@ from utils.score_loss_functions import dice_coeff, jaccard_index
 from models.unet import UNet
 from models.unet_residual import UNetResidual
 from models.unet_attention import UNetResidualAttention
+from models.unet_convnext_attention import UNetConvNeXtAttention
 
 # --- For consistent transforms ---
 from train import PairCompose, ToTensorPair, MyNormalize
 
 
-#COMMAND: python test.py --checkpoint checkpoints/2025-07-03_17-44-50_unet-attention_epoch9.pth --yaml model_params/config1.yaml
+#COMMAND: python test.py --checkpoint images/top3_convnext_regular_loss/2025-07-05_15-37-31_unet-convnext-attention_epoch23_best_0.2052_jaccard_reducelr.pth --yaml model_params/unet_convnext_configs/config1_unet_convnext.yaml
 
 def dice_coeff_test(input: Tensor, target: Tensor, epsilon: float = 1e-6):
     """
@@ -49,6 +50,14 @@ def load_model(model_type, n_channels, n_classes, bilinear, device, checkpoint_p
         model = UNetResidual(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
     elif model_type == 'unet-attention':
         model = UNetResidualAttention(n_channels=n_channels, n_classes=n_classes, bilinear=bilinear)
+    elif model_type == 'unet-convnext-attention':
+        model = UNetConvNeXtAttention(
+              n_channels=3,        # or 5 if your input is 5-channel!
+              n_classes=n_classes,
+              bilinear=True,       # or False if you want transposed conv
+              pretrained=False,
+              freeze_encoder=False  # or False
+          )
     else:
         raise ValueError(f"Unknown model type: {model_type}")
     model = model.to(memory_format=torch.channels_last).to(device)
@@ -61,6 +70,7 @@ def load_model(model_type, n_channels, n_classes, bilinear, device, checkpoint_p
         exit(1)
     model.eval()
     return model
+
 
 def main():
     parser = argparse.ArgumentParser(description="Test a segmentation model on the ISIC test set")
@@ -91,6 +101,8 @@ def main():
     # --- Data loading ---
     test_dir_img = Path('./isic2018_resized/test/ISIC2018_Task1-2_Test_Input/')
     test_dir_mask = Path('./isic2018_resized/test/ISIC2018_Task2_Test_GroundTruth/')
+    # test_dir_img = Path('./isic2018_resized/val/ISIC2018_Task1-2_Validation_Input/')
+    # test_dir_mask = Path('./isic2018_resized/val/ISIC2018_Task2_Validation_GroundTruth/')
     test_transform = PairCompose([
         ToTensorPair(),
         MyNormalize(mean=[0.61788, 0.49051, 0.43048], std=[0.19839, 0.16931, 0.16544]),
