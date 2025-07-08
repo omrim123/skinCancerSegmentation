@@ -97,6 +97,32 @@ python -m utils.visualize --checkpoint images/top3_convnext_regular_loss/2025-07
 
 Graphs and qualitative results are available in the `figures/` folder and in the report.
 
+## Training Progress
+
+The following graph shows the **training and validation score as a function of epochs** for our best-performing model:
+
+![Training and Validation Scores](images/Figure_1.jpg)
+
+*Figure 1: Train and validation Dice/Jaccard scores over epochs.*
+
+## Qualitative Results
+
+Below are example predictions of our best model on two different test images from the ISIC 2018 dataset. Each shows the original dermoscopic image, the ground truth attribute masks, and the corresponding predicted masks produced by our U-Net ConvNeXt-Attention model.
+
+<div align="center">
+
+<img src="images/Figure_2.jpg" alt="Test Image 1: Ground truth and model prediction" width="75%" />
+
+*Figure 2: Model prediction vs ground truth on a test image (ISIC 2018).*
+
+<br/>
+
+<img src="images/Figure_3.jpg" alt="Test Image 2: Ground truth and model prediction" width="75%" />
+
+*Figure 3: Model prediction vs ground truth on another test image (ISIC 2018).*
+
+</div>
+
 ## Architecture
 
 - **Baseline U-Net**: Standard U-Net for medical image segmentation
