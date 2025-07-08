@@ -21,6 +21,7 @@ Our best model achieved a **top-7 leaderboard result** on the ISIC 2018 Task 2 c
 - **Open, Reproducible Science:** All code and configs are included. Experiments are tracked via YAML configuration files for reproducibility.
 - **Competitive Results:** Our ConvNeXt-based model achieved a test Dice score of 0.3213 and Jaccard index of 0.2052 on the ISIC 2018 challenge test set.
 
+
 ## Dataset
 
 We use the [ISIC 2018 Task 2](https://paperswithcode.com/dataset/isic-2018-task-2) dataset:
@@ -30,6 +31,15 @@ We use the [ISIC 2018 Task 2](https://paperswithcode.com/dataset/isic-2018-task-
 
 Each image has up to 5 binary masks, one per lesion attribute.  
 **Note:** The dataset is highly imbalanced — some attributes are very rare.
+
+## Challenge Example
+
+The following image illustrates an example from the ISIC 2018 challenge: the original dermoscopic image alongside its optimal attribute segmentation masks.
+
+<p align="center">
+  <img src="images/GoalImage.jpg" width="450"/>
+</p>
+*Figure: Example of an ISIC 2018 challenge image and its optimal segmentation.*
 
 ## Data Distribution
 
@@ -121,6 +131,51 @@ The following graph shows the **training and validation score as a function of e
 ![Training and Validation Scores](images/Figure_1.jpg)
 
 *Figure 1: Train and validation Dice/Jaccard scores over epochs.*
+
+## Training Experiments
+
+We extensively trained and fine-tuned multiple U-Net variants (classic U-Net, Residual U-Net, Attention U-Net, and ConvNeXt-based U-Net) with various optimizers, learning rate schedulers, and other hyperparameters, typically for 15 epochs. For each architecture, we tested multiple combinations and carefully compared their learning curves to select the best models.
+
+### U-Net (Fine-tuned)
+We trained the classic U-Net architecture with several optimizer and scheduler combinations. The learning curves below show the effect of different training setups (see hyperparameters in the image filenames).
+<p>
+  <img src="images/training_curves/unet-finetuned_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
+  <img src="images/training_curves/unet-finetuned_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
+</p>
+*Figure: Dice/Jaccard training and validation curves for U-Net (Fine-tuned). Hyperparameters and optimizer/scheduler details are visible in the image filenames.*
+
+### Residual U-Net
+Residual U-Net incorporates residual blocks for improved gradient flow. We experimented with different optimizers and learning rate schedulers, as indicated in the filenames.
+<p>
+  <img src="images/training_curves/resunet_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
+  <img src="images/training_curves/resunet_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
+</p>
+*Figure: Residual U-Net training progress with different optimizer/scheduler setups (see filenames for details).*
+
+### Attention U-Net
+Attention U-Net introduces attention gates on skip connections. The first two images show standard setups; the following grid explores various tweaks of loss functions, optimizers, and schedulers (details in filenames).
+<p>
+  <img src="images/training_curves/attentionunet_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
+  <img src="images/training_curves/attentionunet_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
+</p>
+*Figure: Attention U-Net with different optimizer/scheduler combinations.*
+
+Below, we show results from additional experiments ("tweaks") that explore different losses, optimizers, and learning rate schedules:
+<p>
+  <img src="images/training_curves/attentionunet_tweaks_jaccard_loss_sgd_cosineanneal_15epochs.png" width="400"/>
+  <img src="images/training_curves/attentionunet_tweaks_bce_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
+</p>
+*Figure: Attention U-Net training with various loss functions and optimizers (see filenames).*
+
+### ConvNeXt-based U-Net (Encoder Frozen)
+This variant uses a ConvNeXt-Tiny encoder with frozen weights during training. We tested multiple optimizer and scheduler combinations, visible in the filenames below.
+<p>
+  <img src="images/training_curves/unet-convnext-attention_encoderfrozen_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
+  <img src="images/training_curves/unet-convnext-attention_encoderfrozen_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
+</p>
+*Figure: ConvNeXt-based U-Net (encoder frozen) experiments with different optimizer/scheduler settings. These results are for experiments where the encoder weights were frozen during training.*
+
+---
 
 ## Qualitative Results
 
