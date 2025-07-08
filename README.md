@@ -189,18 +189,18 @@ Below you can see training progress plots (Dice and Jaccard vs Step) for each co
   ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.001_ep30.png)
 
 ---
+### ConvNeXt (fine-tuned encoder) — 100 epochs
 
-### ConvNeXt (fine-tuned encoder)
+- **OneCycle, Adam**  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-onecycle_opt-adam_lr-0.0001_ep100.png)
 
-- OneCycle, Adam, 15 epochs  
-  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-onecycle_opt-adam_lr-0.0001_ep100 (1).png)
-- ReduceLR, Adam, 15 epochs  
-  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-reduce_lr_opt-adam_lr-0.0001_ep100 (1).png)
-- Step, Adam, 15 epochs  
-  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.0001_ep100 (1).png)
+- **ReduceLR, Adam**  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-reduce_lr_opt-adam_lr-0.0001_ep100.png)
+
+- **Step, Adam**  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.0001_ep100.png)
 
 ---
-
 **Note:** Each image filename contains the key training hyperparameters (scheduler, optimizer, learning rate, and epochs).
 
 ## Qualitative Results
