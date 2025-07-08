@@ -134,48 +134,90 @@ The following graph shows the **training and validation score as a function of e
 
 ## Training Experiments
 
-We extensively trained and fine-tuned multiple U-Net variants (classic U-Net, Residual U-Net, Attention U-Net, and ConvNeXt-based U-Net) with various optimizers, learning rate schedulers, and other hyperparameters, typically for 15 epochs. For each architecture, we tested multiple combinations and carefully compared their learning curves to select the best models.
+During this project, we trained multiple U-Net-based models with a variety of architectures and hyperparameters. Each training run used 15 epochs (unless otherwise specified), and the hyperparameters are reflected in the filenames of the result plots. We compared the following:
 
-### U-Net (Fine-tuned)
-We trained the classic U-Net architecture with several optimizer and scheduler combinations. The learning curves below show the effect of different training setups (see hyperparameters in the image filenames).
-<p>
-  <img src="images/training_curves/unet-finetuned_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
-  <img src="images/training_curves/unet-finetuned_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
-</p>
-*Figure: Dice/Jaccard training and validation curves for U-Net (Fine-tuned). Hyperparameters and optimizer/scheduler details are visible in the image filenames.*
+- **U-Net (baseline)**
+- **U-Net with Residual Blocks**
+- **U-Net with Attention**
+- **U-Net with ConvNeXt encoder (frozen and fine-tuned)**
 
-### Residual U-Net
-Residual U-Net incorporates residual blocks for improved gradient flow. We experimented with different optimizers and learning rate schedulers, as indicated in the filenames.
-<p>
-  <img src="images/training_curves/resunet_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
-  <img src="images/training_curves/resunet_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
-</p>
-*Figure: Residual U-Net training progress with different optimizer/scheduler setups (see filenames for details).*
-
-### Attention U-Net
-Attention U-Net introduces attention gates on skip connections. The first two images show standard setups; the following grid explores various tweaks of loss functions, optimizers, and schedulers (details in filenames).
-<p>
-  <img src="images/training_curves/attentionunet_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
-  <img src="images/training_curves/attentionunet_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
-</p>
-*Figure: Attention U-Net with different optimizer/scheduler combinations.*
-
-Below, we show results from additional experiments ("tweaks") that explore different losses, optimizers, and learning rate schedules:
-<p>
-  <img src="images/training_curves/attentionunet_tweaks_jaccard_loss_sgd_cosineanneal_15epochs.png" width="400"/>
-  <img src="images/training_curves/attentionunet_tweaks_bce_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
-</p>
-*Figure: Attention U-Net training with various loss functions and optimizers (see filenames).*
-
-### ConvNeXt-based U-Net (Encoder Frozen)
-This variant uses a ConvNeXt-Tiny encoder with frozen weights during training. We tested multiple optimizer and scheduler combinations, visible in the filenames below.
-<p>
-  <img src="images/training_curves/unet-convnext-attention_encoderfrozen_dice_loss_adamw_cosineanneal_15epochs.png" width="400"/>
-  <img src="images/training_curves/unet-convnext-attention_encoderfrozen_dice_loss_adamw_reducelronplateau_15epochs.png" width="400"/>
-</p>
-*Figure: ConvNeXt-based U-Net (encoder frozen) experiments with different optimizer/scheduler settings. These results are for experiments where the encoder weights were frozen during training.*
+Below you can see training progress plots (Dice and Jaccard vs Step) for each configuration.
 
 ---
+
+### U-Net (fine-tune)
+- Cosine LR Scheduler  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-cosine_opt-adam_lr-0.0001_ep15.png)
+- OneCycle LR Scheduler  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-onecycle_opt-adam_lr-0.0001_ep15.png)
+- ReduceLR Scheduler  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-reduce_lr_opt-adam_lr-0.0001_ep15.png)
+
+---
+
+### Unet residual
+
+- Cosine LR Scheduler (15 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-cosine_opt-adam_lr-0.0001_ep15.png)
+- Cosine LR Scheduler (60 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-cosine_opt-adam_lr-0.0001_ep60.png)
+- OneCycle LR Scheduler (15 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-onecycle_opt-adam_lr-0.0001_ep15_jaccardIs0.091.png)
+- OneCycle LR Scheduler (60 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-onecycle_opt-adam_lr-0.0001_ep60.png)
+- ReduceLR Scheduler (15 epochs, Jaccard 0.099)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-reduce_lr_opt-adam_lr-0.0001_ep15_jaccardIs0.099.png)
+
+---
+
+### Unet-attention
+
+- OneCycle, combined loss (60 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.001_ep60_combined_loss_jaccard_dice_bce.jpeg)
+- OneCycle, dice loss (60 epochs)  
+  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.001_ep60.jpeg)
+
+**Tweaks/More Experiments:**
+- Cosine, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_opt-adam_lr-0.0001_ep15.png)
+- Cosine, SGD, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_opt-sgd_lr-0.01_ep15.png)
+- Cosine Restart, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_restart_opt-adam_lr-0.0001_ep15.png)
+- Cosine Restart, SGD, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_restart_opt-sgd_lr-0.01_ep15.png)
+- Exp, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-exp_opt-adam_lr-0.0001_ep15.png)
+- OneCycle, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.0001_ep15 (1).png)
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.0001_ep15.png)
+- ReduceLR, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-reduce_lr_opt-adam_lr-0.0001_ep15.png)
+- ReduceLR, SGD, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-reduce_lr_opt-sgd_lr-0.01_ep15.png)
+- Step, Adam, BCE+Dice+Jaccard loss, 60 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr_loss_is_bce_dice_jaccard-0.001_ep60.png)
+- Step, Adam, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr-0.0001_ep15.png)
+- Step, Adam, 60 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr-0.001_for_checkpoint56.png)
+- Step, SGD, 15 epochs  
+  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-sgd_lr-0.01_ep15.png)
+
+---
+
+### ConvNeXt with Encoder Frozen
+
+- OneCycle, Adam, 30 epochs  
+  ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-onecycle_opt-adam_lr-0.001_ep30.png)
+- ReduceLR, Adam, 30 epochs  
+  ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-reduce_lr_opt-adam_lr-0.001_ep30.png)
+- Step, Adam, 30 epochs  
+  ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.001_ep30.png)
+
+---
+
+**Note:** Each image filename contains the key training hyperparameters (scheduler, optimizer, learning rate, and epochs).
 
 ## Qualitative Results
 
