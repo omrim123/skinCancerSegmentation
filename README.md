@@ -57,21 +57,37 @@ Each image has up to 5 binary masks, one per lesion attribute.
      ...
    ```
 
-### Training
+---
 
-Train your model of choice with a specified configuration:
+## Training
+
+You can train your model of choice with a specified configuration YAML file:
 ```bash
-python train.py --config configs/your_config.yaml --save_dir runs/your_run_name
+python train.py --yaml ./model_params/unet_convnext_configs/config1_unet_convnext.yaml
 ```
-Example configs are provided in `configs/`.  
-You can choose architectures, optimizers, schedulers, batch size, etc., via YAML files.
+- Example configs are provided in `model_params/unet_convnext_configs/`.
+- All training options (model type, scheduler, optimizer, batch size, etc.) are set via the YAML config.
 
-### Evaluation
+---
 
-After training, you can run inference or evaluate on validation/test sets:
+## Testing
+
+After training, evaluate your model on the test set using a saved checkpoint:
 ```bash
-python evaluate.py --model-path runs/your_run_name/best_model.pth --data-path data/val/
+python test.py --checkpoint images/top3_convnext_regular_loss/2025-07-05_15-37-31_unet-convnext-attention_epoch23_best_0.2052_jaccard_reducelr.pth --yaml model_params/unet_convnext_configs/config1_unet_convnext.yaml
 ```
+- Replace `--checkpoint` and `--yaml` with your own paths if different.
+
+---
+
+## Visualization
+
+To visualize model predictions on a single image from the dataset:
+```bash
+python -m utils.visualize --checkpoint images/top3_convnext_regular_loss/2025-07-05_15-37-31_unet-convnext-attention_epoch23_best_0.2052_jaccard_reducelr.pth --yaml model_params/unet_convnext_configs/config1_unet_convnext.yaml --image-index 78 --train 0
+```
+- Use `--image-index` to specify which image to visualize.
+- Use `--train 1` to visualize a training image, `--train 0` for a validation/test image.
 
 ### Results
 
