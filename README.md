@@ -111,13 +111,13 @@ Below are example predictions of our best model on two different test images fro
 
 <div align="center">
 
-<img src="images/Figure_2.jpg" alt="Test Image 1: Ground truth and model prediction" width="75%" />
+<img src="images/Figure_2.png" alt="Test Image 1: Ground truth and model prediction" width="75%" />
 
 *Figure 2: Model prediction vs ground truth on a test image (ISIC 2018).*
 
 <br/>
 
-<img src="images/Figure_3.jpg" alt="Test Image 2: Ground truth and model prediction" width="75%" />
+<img src="images/Figure_3.png" alt="Test Image 2: Ground truth and model prediction" width="75%" />
 
 *Figure 3: Model prediction vs ground truth on another test image (ISIC 2018).*
 
