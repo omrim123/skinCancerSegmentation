@@ -37,9 +37,8 @@ The ISIC 2018 Task 2 dataset is highly imbalanced across the five target attribu
 
 <div align="center">
 
-<img src="images/pie_charts_start/isic2018_attribute_mask_distribution_training.png" alt="Attribute mask distribution (Training set)" width="45%" />
-<img src="images/pie_charts_start/isic2018_attribute_mask_distribution_Validation.png" alt="Attribute mask distribution (Validation set)" width="45%" />
-
+<img src="images/pie_charts_start/isic2018_attribute_mask_distribution_training.png" alt="Attribute mask distribution (Training set)" width="350px" style="display: inline-block;"/>
+<img src="images/pie_charts_start/isic2018_attribute_mask_distribution_Validation.png" alt="Attribute mask distribution (Validation set)" width="350px" style="display: inline-block; margin-left: 24px;"/>
 </div>
 
 *Figure: Distribution of attribute masks in the ISIC 2018 training (left) and validation (right) sets. Most attributes are rare, making the segmentation task particularly challenging.*
