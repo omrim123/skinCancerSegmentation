@@ -150,23 +150,15 @@ Below you can see training progress plots (Dice and Jaccard vs Step) for each co
   ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-cosine_opt-adam_lr-0.0001_ep15.png)
 - OneCycle LR Scheduler  
   ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-onecycle_opt-adam_lr-0.0001_ep15.png)
-- ReduceLR Scheduler  
-  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet_sched-reduce_lr_opt-adam_lr-0.0001_ep15.png)
 
 ---
 
 ### Unet residual
 
-- Cosine LR Scheduler (15 epochs)  
-  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-cosine_opt-adam_lr-0.0001_ep15.png)
 - Cosine LR Scheduler (60 epochs)  
   ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-cosine_opt-adam_lr-0.0001_ep60.png)
-- OneCycle LR Scheduler (15 epochs)  
-  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-onecycle_opt-adam_lr-0.0001_ep15_jaccardIs0.091.png)
 - OneCycle LR Scheduler (60 epochs)  
   ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-onecycle_opt-adam_lr-0.0001_ep60.png)
-- ReduceLR Scheduler (15 epochs, Jaccard 0.099)  
-  ![](images/images_for_testing_unet_and_unet_residual_15_epochs/dice_jaccard_vs_step_unet-residual_sched-reduce_lr_opt-adam_lr-0.0001_ep15_jaccardIs0.099.png)
 
 ---
 
@@ -180,29 +172,12 @@ Below you can see training progress plots (Dice and Jaccard vs Step) for each co
 **Tweaks/More Experiments:**
 - Cosine, Adam, 15 epochs  
   ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_opt-adam_lr-0.0001_ep15.png)
-- Cosine, SGD, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_opt-sgd_lr-0.01_ep15.png)
 - Cosine Restart, Adam, 15 epochs  
   ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_restart_opt-adam_lr-0.0001_ep15.png)
-- Cosine Restart, SGD, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-cosine_restart_opt-sgd_lr-0.01_ep15.png)
-- Exp, Adam, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-exp_opt-adam_lr-0.0001_ep15.png)
-- OneCycle, Adam, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.0001_ep15 (1).png)
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-onecycle_opt-adam_lr-0.0001_ep15.png)
-- ReduceLR, Adam, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-reduce_lr_opt-adam_lr-0.0001_ep15.png)
-- ReduceLR, SGD, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-reduce_lr_opt-sgd_lr-0.01_ep15.png)
 - Step, Adam, BCE+Dice+Jaccard loss, 60 epochs  
   ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr_loss_is_bce_dice_jaccard-0.001_ep60.png)
-- Step, Adam, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr-0.0001_ep15.png)
 - Step, Adam, 60 epochs  
   ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-adam_lr-0.001_for_checkpoint56.png)
-- Step, SGD, 15 epochs  
-  ![](images/tweaks_unet_attention/dice_jaccard_vs_step_unet-attention_sched-step_opt-sgd_lr-0.01_ep15.png)
 
 ---
 
@@ -210,10 +185,19 @@ Below you can see training progress plots (Dice and Jaccard vs Step) for each co
 
 - OneCycle, Adam, 30 epochs  
   ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-onecycle_opt-adam_lr-0.001_ep30.png)
-- ReduceLR, Adam, 30 epochs  
-  ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-reduce_lr_opt-adam_lr-0.001_ep30.png)
 - Step, Adam, 30 epochs  
   ![](images/tweaks_convnext_freeze/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.001_ep30.png)
+
+---
+
+### ConvNeXt (fine-tuned encoder)
+
+- OneCycle, Adam, 15 epochs  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-onecycle_opt-adam_lr-0.0001_ep100 (1).png)
+- ReduceLR, Adam, 15 epochs  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-reduce_lr_opt-adam_lr-0.0001_ep100 (1).png)
+- Step, Adam, 15 epochs  
+  ![](images/top3_convnext_regular_loss/dice_jaccard_vs_step_unet-convnext-attention_model-unet-convnext-attention_sched-step_opt-adam_lr-0.0001_ep100 (1).png)
 
 ---
 
