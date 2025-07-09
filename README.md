@@ -86,6 +86,33 @@ The ISIC 2018 Task 2 dataset is highly imbalanced across the five target attribu
 
 ---
 
+## Configuration Options
+
+All training, validation, and model settings are specified via a YAML config file (see examples in `model_params/unet_convnext_configs/`). Below are the main options you can tune:
+
+| Parameter         | Description |
+|-------------------|-------------|
+| `epochs`          | Number of training epochs (e.g., 10, 40, 100). |
+| `batch_size`      | Batch size (e.g., 4, 8, 16, 32, 64). |
+| `lr`              | Learning rate (e.g., 0.001, 0.0001, 0.003). |
+| `optimizer`       | Optimizer: `adam`, `adamw`, `sgd`, `rmsprop`, `adabelief`, `adagrad`. |
+| `scheduler`       | LR scheduler: `reduce_lr`, `cosine`, `cosine_restart`, `step`, `exp`, `onecycle`. |
+| `weight_decay`    | Weight decay for regularization (e.g., 0.0, 1e-5, 1e-8). |
+| `momentum`        | Momentum (used with some optimizers, e.g., SGD, RMSProp). |
+| `init`            | Weight initialization: `xavier`, `kaiming`, `orthogonal`, `normal`, `none`. |
+| `pretrained`      | Use pretrained weights for encoder (`true`/`false`). |
+| `model`           | Model variant: `unet`, `unet-residual`, `unet-attention`, `unet-convnext-attention`. |
+| `classes`         | Number of segmentation output classes (usually 5 for ISIC2018 Task 2). |
+| `bilinear`        | Use bilinear upsampling (`true`) or transposed convolution (`false`). |
+| `amp`             | Use mixed precision training (`true`/`false`). |
+| `load`            | Path to checkpoint to resume training, or `null` to train from scratch. |
+| `t_max`           | Cosine AnnealingLR: Number of epochs for a full cosine cycle. |
+| `eta_min`         | Cosine AnnealingLR: Minimum learning rate. |
+
+**Tip:**  
+Each experiment is fully reproducible: all key training options and model hyperparameters are stored in your YAML config, and reflected in output file names for easy comparison.
+
+
 ## Training
 
 You can train your model of choice with a specified configuration YAML file:
